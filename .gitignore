@@ -1,0 +1,8 @@
+.idea
+__pycache__/
+*.egg-info/
+tests/htmlcov
+tests/.coverage
+tests/lextab.py
+tests/yacctab.py
+

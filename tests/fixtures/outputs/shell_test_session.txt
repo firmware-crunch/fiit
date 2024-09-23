@@ -1,0 +1,42 @@
+Wellcome to the test shell
+
+test-shell >>> 
+
+    command                 alias    description
+    -------                 -----    ------------
+    
+    %help                   %h       Print this help
+    
+    %shell_objects          %so      Shell objects register via `CustomShell.map_object_in_shell` interface.
+    
+    %test_cmd               %tc      %test_cmd cmd_arg1
+    
+                                     This is the doc of the test command.
+    
+                                     Another stuff about this command.
+    
+                                     positional arguments:
+                                       cmd_arg1  command argument 1
+    
+    %map_object_at_runtime  -
+    
+    %check_shell_objects    -
+    
+
+    For a more detailed command description, type %<cmd>? (example %mem_map?)
+
+
+test-shell >>> 
+Test Function Call
+
+test-shell >>> 
+Mapping shell object.
+
+test-shell >>> 
+object_map_before_start_shell : <class 'int'>
+map_object_at_runtime : <class 'int'>
+
+test-shell >>> 
+Shell object check ok.
+
+test-shell >>> 
