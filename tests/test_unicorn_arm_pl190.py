@@ -371,16 +371,3 @@ class TestUnicornArmPl190DaisyChain(BaseTestUnicornArmPl190DaisyChain):
         assert self.mmio_read_vic0(OFF_VICFIQSTATUS) == 0
         assert self.mmio_read_vic1(OFF_VICRAWINTR) == 0
         assert self.mmio_read_vic1(OFF_VICFIQSTATUS) == 0
-
-
-@pytest.mark.parametrize(
-    'temp_named_txt_file',
-    [[f'plugin_unicorn_arm_pl190: {{base_address: {VIC_0_BASE}}}', '.yaml']],
-    indirect=['temp_named_txt_file'])
-def test_load_plugin_unicorn_generic_arm_core(temp_named_txt_file, capsys):
-    pl = PluginManager()
-    uc = Uc(UC_ARCH_ARM, UC_MODE_ARM | UC_MODE_LITTLE_ENDIAN)
-    uc.mem_map(VIC_0_BASE, VIC_MAP_LEN, UC_PROT_READ | UC_PROT_WRITE | UC_PROT_EXEC)
-    pl.plugins_context.add('unicorn_uc', uc)
-    pl.load_plugin_by_config_file(temp_named_txt_file.name)
-    assert pl.plugins_context.get('plugin_unicorn_arm_pl190') is not None

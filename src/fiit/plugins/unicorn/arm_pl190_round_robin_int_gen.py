@@ -19,30 +19,26 @@
 #
 ################################################################################
 
-from typing import Dict, Any
+from typing import Dict, Any, cast
 
-from fiit.unicorn.arm.arm_generic_core import UnicornArmGenericCore
-from fiit.unicorn.arm.pl190 import UnicornArmPl190
 from fiit.unicorn.arm.pl190_round_robin_int_gen import (
     UnicornPl190RoundRobinIntGenerator)
 from fiit.unicorn.emulator import (
     UnicornEmulator, EXEC_QUANTUM_UNIT_INSN, EXEC_QUANTUM_UNIT_US,
     EXEC_QUANTUM_UNIT_BLOCK)
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L4)
+import fiit.plugins.context_config as ctx_conf
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 class PluginUnicornArmPl190IntGenerator(FiitPlugin):
     NAME = 'plugin_unicorn_arm_pl190_round_robin_int_generator'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L4
     REQUIREMENTS = [
-        Requirement('unicorn_arm_generic_core', UnicornArmGenericCore),
-        Requirement('unicorn_arm_pl190', UnicornArmPl190)
-    ]
+        ctx_conf.UNICORN_ARM_GENERIC_CORE.as_require(),
+        ctx_conf.UNICORN_ARM_PL190.as_require()]
     OPTIONAL_REQUIREMENTS = [
-        Requirement('unicorn_emulator', UnicornEmulator),
-    ]
+        ctx_conf.UNICORN_EMULATOR.as_require()]
+    OBJECTS_PROVIDED = [
+        ctx_conf.UNICORN_PL190_ROUND_ROBIN_INT_GENERATOR]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -72,10 +68,11 @@ class PluginUnicornArmPl190IntGenerator(FiitPlugin):
         optional_requirements: Dict[str, Any]
     ):
         rrig = UnicornPl190RoundRobinIntGenerator(
-            requirements['unicorn_arm_generic_core'],
-            requirements['unicorn_arm_pl190'])
+            requirements[ctx_conf.UNICORN_ARM_GENERIC_CORE.name],
+            requirements[ctx_conf.UNICORN_ARM_PL190.name])
 
-        if emu := optional_requirements.get('unicorn_emulator'):
+        if emu := optional_requirements.get(ctx_conf.UNICORN_EMULATOR.name):
+            emu = cast(UnicornEmulator, emu)
             emu.set_interrupts(
                 rrig.gen_interrupt,
                 self._EXEC_QUANTUM_UNIT[plugin_config['exec_quantum_unit']],
@@ -85,4 +82,4 @@ class PluginUnicornArmPl190IntGenerator(FiitPlugin):
         #         self._EXEC_QUANTUM_UNIT[plugin_config['exec_quantum_unit']],
         #         plugin_config['exec_quantum'])
 
-        init_context.add('unicorn_pl190_round_robin_int_generator', rrig)
+        init_context.add(ctx_conf.UNICORN_PL190_ROUND_ROBIN_INT_GENERATOR.name, rrig)

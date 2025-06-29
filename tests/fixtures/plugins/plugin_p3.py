@@ -21,16 +21,20 @@
 
 from typing import Dict, Any
 
-from fiit.core.plugin import FiitPlugin, FiitPluginContext, Requirement
+from fiit.core.plugin import (
+    FiitPlugin, FiitPluginContext, PluginRequirement, ObjectRequirement)
 from .plugin_p1 import PluginTestP1
 from .plugin_p2 import PluginTestP2
+from .plugin_p8 import CustomObject
 
 
 class PluginTestP3(FiitPlugin):
     NAME = 'plugin_test_p3'
-    LOADING_PRIORITY = 2
-    REQUIREMENTS = [Requirement('plugin_test_p1', PluginTestP1)]
-    OPTIONAL_REQUIREMENTS = [Requirement('plugin_test_p2', PluginTestP2)]
+    REQUIREMENTS = [
+        PluginRequirement('plugin_test_p1', PluginTestP1),
+        ObjectRequirement('custom_object', CustomObject)]
+    OPTIONAL_REQUIREMENTS = [
+        PluginRequirement('plugin_test_p2', PluginTestP2)]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',

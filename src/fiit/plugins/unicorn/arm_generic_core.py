@@ -24,15 +24,17 @@ from typing import Dict, Any
 import unicorn
 
 from fiit.unicorn.arm.arm_generic_core import UnicornArmGenericCore
+import fiit.plugins.context_config as conf
 from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L2)
+    FiitPlugin, FiitPluginContext, ObjectRequirement, ContextObject)
 
 
 class PluginUnicornGenericArmCore(FiitPlugin):
     NAME = 'plugin_unicorn_arm_generic_core'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L2
-    REQUIREMENTS = [Requirement('unicorn_uc', unicorn.Uc)]
+    REQUIREMENTS = [
+        conf.UNICORN_UC.as_require()]
+    OBJECTS_PROVIDED = [
+        conf.UNICORN_ARM_GENERIC_CORE]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -50,6 +52,6 @@ class PluginUnicornGenericArmCore(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        uc = requirements.get('unicorn_uc')
+        uc = requirements.get(conf.UNICORN_UC.name)
         arm_core = UnicornArmGenericCore(uc, **plugin_config)
-        plugins_context.add('unicorn_arm_generic_core', arm_core)
+        plugins_context.add(conf.UNICORN_ARM_GENERIC_CORE.name, arm_core)

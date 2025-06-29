@@ -43,7 +43,7 @@ setuptools.setup(
     ],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
-    python_requires=">=3.8.16",
+    python_requires=">=3.9",
     install_requires=[
         'unicorn ==2.0.1',
         #'unicorn @ git+https://github.com/unicorn-engine/unicorn.git@dev#subdirectory=bindings/python',

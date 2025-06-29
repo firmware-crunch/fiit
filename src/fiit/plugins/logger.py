@@ -22,13 +22,11 @@
 from typing import Dict, Any
 
 from fiit.core.logger import FiitLogger
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, PLUGIN_PRIORITY_LEVEL_BUILTIN_L0)
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 class PluginEmulatorLogger(FiitPlugin):
     NAME = 'plugin_logger'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L0
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',

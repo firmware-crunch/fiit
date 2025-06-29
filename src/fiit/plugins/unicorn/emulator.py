@@ -24,15 +24,19 @@ from typing import Optional, cast, Dict, Any
 from fiit.unicorn.arch_unicorn import ArchUnicorn
 from fiit.unicorn.emulator import UnicornEmulator, UnicornEmulatorFrontend
 from fiit.core.shell import EmulatorShell
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L1)
+import fiit.plugins.context_config as ctx_conf
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 class PluginUnicornEmulator(FiitPlugin):
     NAME = 'plugin_unicorn_emulator'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L1
-    OPTIONAL_REQUIREMENTS = [Requirement('emulator_shell', EmulatorShell)]
+    OPTIONAL_REQUIREMENTS = [
+        ctx_conf.EMULATOR_SHELL.as_require()]
+    OBJECTS_PROVIDED = [
+        ctx_conf.UNICORN_EMULATOR,
+        ctx_conf.EMULATOR_ADDRESS_SPACE,
+        ctx_conf.EMULATOR_ARCH,
+        ctx_conf.UNICORN_UC]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -60,12 +64,12 @@ class PluginUnicornEmulator(FiitPlugin):
     ):
         self.emu = UnicornEmulator(**plugin_config)
 
-        plugins_context.add('unicorn_emulator', self.emu)
-        plugins_context.add('emulator_address_space', self.emu.address_space)
-        plugins_context.add('emulator_arch', self.emu.arch)
-        plugins_context.add('unicorn_uc', self.emu.uc)
+        plugins_context.add(ctx_conf.UNICORN_EMULATOR.name, self.emu)
+        plugins_context.add(ctx_conf.EMULATOR_ADDRESS_SPACE.name, self.emu.address_space)
+        plugins_context.add(ctx_conf.EMULATOR_ARCH.name, self.emu.arch)
+        plugins_context.add(ctx_conf.UNICORN_UC.name, self.emu.uc)
 
-        if emu_shell := optional_requirements.get('emulator_shell'):
+        if emu_shell := optional_requirements.get(ctx_conf.EMULATOR_SHELL.name):
             UnicornEmulatorFrontend(self.emu, cast(EmulatorShell, emu_shell))
         else:
             plugins_context.program_entry = self.plugin_program_entry

@@ -21,7 +21,7 @@
 
 from typing import Dict, Any
 
-from fiit.core.plugin import FiitPlugin, FiitPluginContext, Requirement
+from fiit.core.plugin import FiitPlugin, FiitPluginContext, PluginRequirement
 
 
 class CustomDependencyP5:
@@ -30,8 +30,7 @@ class CustomDependencyP5:
 
 class PluginTestP5(FiitPlugin):
     NAME = 'plugin_test_p5'
-    LOADING_PRIORITY = 2
-    REQUIREMENTS = [Requirement('plugin_test_requirement', CustomDependencyP5)]
+    REQUIREMENTS = [PluginRequirement('plugin_test_requirement', CustomDependencyP5)]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',

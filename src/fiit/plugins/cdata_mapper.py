@@ -34,9 +34,8 @@ from fiit.core.ctypes import (
     CTYPES_TRANSLATOR_FLAVOR)
 from fiit.core.shell import register_alias
 from .emulator_shell import EmulatorShell
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L4)
+import fiit.plugins.context_config as ctx_conf
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 class ShellCDataMemMapper:
@@ -102,11 +101,13 @@ class CDataMemMapperFrontend(IPython.core.magic.Magics):
 
 class PluginCDataMemoryMapper(FiitPlugin):
     NAME = 'plugin_c_data_memory_mapper'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L4
     REQUIREMENTS = [
-        Requirement('emulator_address_space', AddressSpace),
-        Requirement('emulator_arch', Architecture)]
-    OPTIONAL_REQUIREMENTS = [Requirement('emulator_shell', EmulatorShell)]
+        ctx_conf.EMULATOR_ADDRESS_SPACE.as_require(),
+        ctx_conf.EMULATOR_ARCH.as_require()]
+    OPTIONAL_REQUIREMENTS = [
+        ctx_conf.EMULATOR_SHELL.as_require()]
+    OBJECTS_PROVIDED = [
+        ctx_conf.CDATA_MEMORY_MAPPER]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -133,7 +134,7 @@ class PluginCDataMemoryMapper(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        arch = cast(Architecture, requirements['emulator_arch'])
+        arch = cast(Architecture, requirements[ctx_conf.EMULATOR_ARCH.name])
         ctypes_arch = f'{arch.cpu_name}:{arch.endian}:{arch.mem_bit_size}'
         ctypes_options = plugin_config['ctypes_options']
         ctypes_flavor = CTYPES_TRANSLATOR_FLAVOR[plugin_config['ctypes_flavor']]
@@ -146,14 +147,14 @@ class PluginCDataMemoryMapper(FiitPlugin):
             ctt.add_cdata_type(extra_cdata_types)
 
         cdata_mem_mapper = CDataMemMapper(
-            requirements['emulator_address_space'], ctt.get_ctypes_config())
+            requirements[ctx_conf.EMULATOR_ADDRESS_SPACE.name], ctt.get_ctypes_config())
 
         for cdata_map_file in plugin_config['cdata_mapping_files']:
             cdata_mem_mapper.map_cdata_from_file(cdata_map_file)
 
-        plugins_context.add('cdata_memory_mapper', cdata_mem_mapper)
+        plugins_context.add(ctx_conf.CDATA_MEMORY_MAPPER.name, cdata_mem_mapper)
 
-        if emu_shell := optional_requirements.get('emulator_shell'):
+        if emu_shell := optional_requirements.get(ctx_conf.EMULATOR_SHELL.name):
             CDataMemMapperFrontend(
                 cdata_mem_mapper, emu_shell,
                 ADDRESS_FORMAT[arch.mem_bit_size])

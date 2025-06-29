@@ -22,8 +22,8 @@
 from typing import Optional, Dict, Any, Union
 
 from fiit.core.shell import EmulatorShell
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, PLUGIN_PRIORITY_LEVEL_BUILTIN_L0)
+from fiit.core.plugin import FiitPlugin, FiitPluginContext, ContextObject
+import fiit.plugins.context_config as ctx_conf
 
 class ShellPluginsContext:
     def __repr__(self):
@@ -34,7 +34,7 @@ class ShellPluginsContext:
 
 class PluginEmulatorShell(FiitPlugin):
     NAME = 'plugin_emulator_shell'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L0
+    OBJECTS_PROVIDED = [ctx_conf.EMULATOR_SHELL]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -60,7 +60,7 @@ class PluginEmulatorShell(FiitPlugin):
         optional_requirements: Dict[str, Any]
     ):
         self.emu_shell = EmulatorShell(**plugin_config)
-        plugins_context.add('emulator_shell', self.emu_shell)
+        plugins_context.add(ctx_conf.EMULATOR_SHELL.name, self.emu_shell)
         plugins_context.program_entry = self.plugin_program_entry
         self.context = plugins_context.context
 

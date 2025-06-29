@@ -21,20 +21,18 @@
 
 from typing import Any,  Dict
 
-import unicorn
-
 from fiit.core.ctypes import CTYPES_TRANSLATOR_FLAVOR
 from fiit.unicorn.function_hooking_engine import UnicornFunctionHookingEngine
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L4)
+import fiit.plugins.context_config as ctx_conf
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 class PluginUnicornFunctionHookingEngine(FiitPlugin):
     NAME = 'plugin_unicorn_function_hooking_engine'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L4
-    REQUIREMENTS = [Requirement('unicorn_uc', unicorn.Uc)]
-    OPTIONAL_REQUIREMENTS = []
+    REQUIREMENTS = [
+        ctx_conf.UNICORN_UC.as_require()]
+    OBJECTS_PROVIDED = [
+        ctx_conf.FUNCTION_HOOKING_ENGINE]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -72,7 +70,7 @@ class PluginUnicornFunctionHookingEngine(FiitPlugin):
         ctypes_flavor = CTYPES_TRANSLATOR_FLAVOR[plugin_config['ctypes_flavor']]
 
         he = UnicornFunctionHookingEngine(
-            requirements['unicorn_uc'],
+            requirements[ctx_conf.UNICORN_UC.name],
             ctypes_options=plugin_config['ctypes_options'],
             ctypes_flavor=ctypes_flavor,
             default_cc_options=plugin_config['default_cc_options'],
@@ -88,4 +86,4 @@ class PluginUnicornFunctionHookingEngine(FiitPlugin):
             he.register_hook_functions_from_file(python_hook_file)
             he.register_hook_handler_from_file(python_hook_file)
 
-        plugins_context.add('function_hooking_engine', he)
+        plugins_context.add(ctx_conf.FUNCTION_HOOKING_ENGINE.name, he)

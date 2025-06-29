@@ -21,20 +21,16 @@
 
 from typing import Any, Dict, cast
 
-import unicorn
-
 from fiit.unicorn.dbg import UnicornDbg, UnicornDbgFrontend
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L2)
-from fiit.core.shell import EmulatorShell
+import fiit.plugins.context_config as ctx_conf
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 class PluginUnicornDbg(FiitPlugin):
     NAME = 'plugin_unicorn_dbg'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L2
-    REQUIREMENTS = [Requirement('unicorn_uc', unicorn.Uc)]
-    OPTIONAL_REQUIREMENTS = [Requirement('emulator_shell', EmulatorShell)]
+    REQUIREMENTS = [ctx_conf.UNICORN_UC.as_require()]
+    OPTIONAL_REQUIREMENTS = [ctx_conf.EMULATOR_SHELL.as_require()]
+    OBJECTS_PROVIDED = [ctx_conf.UNICORN_DBG]
     CONFIG_SCHEMA = {NAME: {'type': 'dict'}}
 
     def plugin_load(
@@ -44,9 +40,9 @@ class PluginUnicornDbg(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        dbg = UnicornDbg(requirements['unicorn_uc'])
+        dbg = UnicornDbg(requirements[ctx_conf.UNICORN_UC.name])
 
-        if emu_shell := optional_requirements.get('emulator_shell'):
-            UnicornDbgFrontend(dbg, cast(EmulatorShell, emu_shell))
+        if emu_shell := optional_requirements.get(ctx_conf.EMULATOR_SHELL.name):
+            UnicornDbgFrontend(dbg, emu_shell)
 
-        plugins_context.add('unicorn_dbg', dbg)
+        plugins_context.add(ctx_conf.UNICORN_DBG.name, dbg)

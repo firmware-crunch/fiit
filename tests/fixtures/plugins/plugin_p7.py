@@ -21,12 +21,11 @@
 
 from typing import Dict, Any
 
-from fiit.core.plugin import FiitPlugin, FiitPluginContext, Requirement
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 class PluginTestP7(FiitPlugin):
     NAME = 'plugin_test_p7'
-    LOADING_PRIORITY = 2
     CONFIG_SCHEMA_RULE_SET_REGISTRY = (('DEF_CUSTOM_BOOL', {'type': 'boolean'}),)
     CONFIG_SCHEMA = {
         NAME: {

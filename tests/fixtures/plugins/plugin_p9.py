@@ -19,21 +19,31 @@
 #
 ################################################################################
 
-import pytest
+from typing import Dict, Any
 
-from fiit.core.plugin import PluginManager
-
-from .fixtures.unicorn_utils import BinBlob2Emulator
-from .fixtures.blobs import BlobArmEl32MinimalInt
-
-from .fixtures.fixture_utils import temp_named_txt_file
+from fiit.core.plugin import FiitPlugin, FiitPluginContext, ObjectRequirement
 
 
-@pytest.mark.parametrize(
-    'temp_named_txt_file', [['plugin_unicorn_arm_generic_core: {}', '.yaml']],
-    indirect=['temp_named_txt_file'])
-def test_load_plugin_unicorn_generic_arm_core(temp_named_txt_file, capsys):
-    pl = PluginManager()
-    pl.plugins_context.add('unicorn_uc', BinBlob2Emulator(BlobArmEl32MinimalInt).uc)
-    pl.load_plugin_by_config_file(temp_named_txt_file.name)
-    assert pl.plugins_context.get('plugin_unicorn_arm_generic_core') is not None
+class UnreferencedObject:
+    pass
+
+
+class PluginTestP9(FiitPlugin):
+    NAME = 'plugin_test_p9'
+    REQUIREMENTS = [ObjectRequirement('unreferenced_object', UnreferencedObject)]
+    CONFIG_SCHEMA = {
+        NAME: {
+            'type': 'dict',
+            'required': False,
+            'schema': {'activate': {'type': 'boolean'}}
+        }
+    }
+
+    def plugin_load(
+        self,
+        plugins_context: FiitPluginContext,
+        plugin_config: dict,
+        requirements: Dict[str, Any],
+        optional_requirements: Dict[str, Any]
+    ):
+        pass

@@ -26,7 +26,6 @@ from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 class PluginTestP1(FiitPlugin):
     NAME = 'plugin_test_p1'
-    LOADING_PRIORITY = 0
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',

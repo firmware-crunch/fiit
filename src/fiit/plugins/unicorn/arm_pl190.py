@@ -21,25 +21,24 @@
 
 from typing import Dict, Any, cast
 
-from unicorn import Uc
+import unicorn
 from unicorn.unicorn_const import UC_HOOK_INTR
 
-from fiit.unicorn.arm.arm_generic_core import UnicornArmGenericCore
 from fiit.unicorn.arm.pl190 import UnicornArmPl190
 from fiit.core.emulator_types import AddressSpace
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L3)
+import fiit.plugins.context_config as ctx_conf
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 class PluginUnicornArmPl190(FiitPlugin):
     NAME = 'plugin_unicorn_arm_pl190'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L3
-    REQUIREMENTS = [Requirement('unicorn_uc', Uc)]
+    REQUIREMENTS = [
+        ctx_conf.UNICORN_UC.as_require()]
     OPTIONAL_REQUIREMENTS = [
-        Requirement('unicorn_arm_generic_core', UnicornArmGenericCore),
-        Requirement('emulator_address_space', AddressSpace)
-    ]
+        ctx_conf.UNICORN_ARM_GENERIC_CORE.as_require(),
+        ctx_conf.EMULATOR_ADDRESS_SPACE.as_require()]
+    OBJECTS_PROVIDED = [
+        ctx_conf.UNICORN_ARM_PL190]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -56,7 +55,7 @@ class PluginUnicornArmPl190(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        uc = cast(Uc, requirements['unicorn_uc'])
+        uc = cast(unicorn.Uc, requirements[ctx_conf.UNICORN_UC.name])
         pl190_base_addr = plugin_config['base_address']
         auto_map = True
 
@@ -68,13 +67,13 @@ class PluginUnicornArmPl190(FiitPlugin):
         pl190 = UnicornArmPl190(uc, pl190_base_addr, auto_map)
         uc.hook_add(UC_HOOK_INTR, pl190.reset_handler, begin=1, end=0)
 
-        if cpu := optional_requirements.get('unicorn_arm_generic_core', None):
+        if cpu := optional_requirements.get(ctx_conf.UNICORN_ARM_GENERIC_CORE.name, None):
             pl190.set_nvicfiq_high_callback(cpu.set_fiq_mode)
             pl190.set_nvicirq_high_callback(cpu.set_irq_mode)
 
-        if ((address_space := optional_requirements.get('emulator_address_space'))
+        if ((address_space := optional_requirements.get(ctx_conf.EMULATOR_ADDRESS_SPACE.name))
                 and auto_map):
             address_space = cast(AddressSpace, address_space)
             address_space.memory_regions.append(pl190.mem_region)
 
-        init_context.add('unicorn_arm_pl190', pl190)
+        init_context.add(ctx_conf.UNICORN_ARM_PL190.name, pl190)

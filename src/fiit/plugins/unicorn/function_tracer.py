@@ -22,15 +22,12 @@
 from typing import Any, Dict
 
 from fiit.core.dev_utils import pkg_object_loader
-from fiit.unicorn.function_hooking_engine import (
-    UnicornFunctionHookingEngine)
 from fiit.unicorn.function_tracer import (
     FUNC_TRACER_EXT_DIR, predicate_is_func_trace_ext,
     predicate_is_log_format_ext, FUNC_TRACER_LOG_BIN, FUNC_TRACER_LOG_PYTHON,
     UnicornFunctionTracer)
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L5)
+import fiit.plugins.context_config as ctx_conf
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
 
 def _get_filter_ext_conf_schema() -> dict:
@@ -61,9 +58,10 @@ def normalize_log_output_type(value: dict) -> int:
 
 class PluginUnicornFunctionTracer(FiitPlugin):
     NAME = 'plugin_unicorn_function_tracer'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L5
-    REQUIREMENTS = [Requirement('function_hooking_engine', UnicornFunctionHookingEngine)]
-
+    REQUIREMENTS = [
+        ctx_conf.FUNCTION_HOOKING_ENGINE.as_require()]
+    OBJECTS_PROVIDED = [
+        ctx_conf.FUNCTION_TRACER]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -131,8 +129,8 @@ class PluginUnicornFunctionTracer(FiitPlugin):
     ):
 
         ft = UnicornFunctionTracer(
-            requirements['function_hooking_engine'],
+            requirements[ctx_conf.FUNCTION_HOOKING_ENGINE.name],
             **plugin_config,
             data=dict(plugins_context.context))
 
-        plugins_context.add('function_tracer', ft)
+        plugins_context.add(ctx_conf.FUNCTION_TRACER.name, ft)

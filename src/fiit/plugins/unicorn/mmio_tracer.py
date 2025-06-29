@@ -22,19 +22,15 @@
 import re
 from typing import Dict, List, Set, Any, cast
 
-from unicorn import Uc
-
 from fiit.unicorn.mmio_tracer import (
     CodeAddress, RegisterAddress, RegisterAddressFieldsMap, SvdPeripheralName,
     SvdPeripheralRegisterTree, SvdPeripheralRegisterFieldTree, RegisterField,
     WatchMemoryRangeDict, WatchRegisterDict, WatchSvdPeripheralDict,
     WatchSvdRegisterDict, UnicornMmioTracer, UnicornMmioTracerFrontend,
     UnicornMmioDbg, UnicornMmioDbgFrontend)
-from fiit.unicorn.dbg import UnicornDbg
 from fiit.core.config_loader import normalize_hex_int64
-from fiit.core.plugin import (
-    FiitPlugin, FiitPluginContext, Requirement,
-    PLUGIN_PRIORITY_LEVEL_BUILTIN_L4, PLUGIN_PRIORITY_LEVEL_BUILTIN_L5)
+import fiit.plugins.context_config as ctx_conf
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 from fiit.core.shell import EmulatorShell
 
 
@@ -290,9 +286,12 @@ plugin_mmio_rule_set_registry = (
 
 class PluginUnicornMmioTracer(FiitPlugin):
     NAME = 'plugin_unicorn_mmio_tracer'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L4
-    REQUIREMENTS = [Requirement('unicorn_uc', Uc)]
-    OPTIONAL_REQUIREMENTS = [Requirement('emulator_shell', EmulatorShell)]
+    REQUIREMENTS = [
+        ctx_conf.UNICORN_UC.as_require()]
+    OPTIONAL_REQUIREMENTS = [
+        ctx_conf.EMULATOR_SHELL.as_require()]
+    OBJECTS_PROVIDED = [
+        ctx_conf.UNICORN_MMIO_TRACER]
     CONFIG_SCHEMA_RULE_SET_REGISTRY = plugin_mmio_rule_set_registry
     CONFIG_SCHEMA = {
         NAME: {
@@ -327,14 +326,17 @@ class PluginUnicornMmioTracer(FiitPlugin):
             emulator_shell = cast(EmulatorShell, emulator_shell)
             UnicornMmioTracerFrontend(mmio_tracer, emulator_shell)
 
-        plugins_context.add('unicorn_mmio_tracer', mmio_tracer)
+        plugins_context.add(ctx_conf.UNICORN_MMIO_TRACER.name, mmio_tracer)
 
 
 class PluginUnicornMmioDbg(FiitPlugin):
     NAME = 'plugin_unicorn_mmio_dbg'
-    LOADING_PRIORITY = PLUGIN_PRIORITY_LEVEL_BUILTIN_L5
-    REQUIREMENTS = [Requirement('unicorn_dbg', UnicornDbg)]
-    OPTIONAL_REQUIREMENTS = [Requirement('emulator_shell', EmulatorShell)]
+    REQUIREMENTS = [
+        ctx_conf.UNICORN_DBG.as_require()]
+    OPTIONAL_REQUIREMENTS = [
+        ctx_conf.EMULATOR_SHELL.as_require()]
+    OBJECTS_PROVIDED = [
+        ctx_conf.UNICORN_MMIO_DBG]
     CONFIG_SCHEMA_RULE_SET_REGISTRY = plugin_mmio_rule_set_registry
     CONFIG_SCHEMA = {
         NAME: {
@@ -355,11 +357,11 @@ class PluginUnicornMmioDbg(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        mmio_dbg = UnicornMmioDbg(requirements['unicorn_dbg'], **plugin_config)
+        mmio_dbg = UnicornMmioDbg(requirements[ctx_conf.UNICORN_DBG.name], **plugin_config)
 
-        if emulator_shell := optional_requirements.get('emulator_shell'):
+        if emulator_shell := optional_requirements.get(ctx_conf.EMULATOR_SHELL.name):
             emulator_shell = cast(EmulatorShell, emulator_shell)
             emulator_shell.stream_logger_to_shell_stdout(mmio_dbg.LOGGER_NAME)
             UnicornMmioDbgFrontend(mmio_dbg, emulator_shell)
 
-        plugins_context.add('unicorn_mmio_dbg', mmio_dbg)
+        plugins_context.add(ctx_conf.UNICORN_MMIO_DBG.name, mmio_dbg)

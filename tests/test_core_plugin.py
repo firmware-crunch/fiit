@@ -28,6 +28,7 @@ from fiit.core.plugin import (
 from .fixtures.plugins.plugin_p1 import PluginTestP1
 from .fixtures.plugins.plugin_p2 import PluginTestP2
 from .fixtures.plugins.plugin_p3 import PluginTestP3
+from .fixtures.plugins.plugin_p8 import PluginTestP8, CustomObject
 from .fixtures.fixture_utils import temp_named_txt_file
 
 
@@ -46,6 +47,9 @@ plugin_fixture_dir = \
 
         plugin_test_p3:
             activate: false
+
+        plugin_test_p8:
+            activate: false
         """,
       '.yaml']],
     indirect=['temp_named_txt_file'])
@@ -55,6 +59,8 @@ def test_plugin_loader_load_plugin_by_config_file(temp_named_txt_file):
     assert pl.plugins_context.get(PluginTestP1.NAME)
     assert pl.plugins_context.get(PluginTestP2.NAME), PluginTestP2
     assert pl.plugins_context.get(PluginTestP3.NAME), PluginTestP3
+    assert pl.plugins_context.get(PluginTestP8.NAME), PluginTestP8
+    assert pl.plugins_context.get('custom_object'), CustomObject
 
 
 @pytest.mark.parametrize(
@@ -78,6 +84,9 @@ def test_plugin_emulator_unload_plugin(temp_named_txt_file):
 
         plugin_test_p3:
             activate: false
+
+        plugin_test_p8:
+            activate: false
         """,
       '.yaml']],
     indirect=['temp_named_txt_file'])
@@ -88,31 +97,24 @@ def test_plugin_manager_load_plugin_by_config_file_with_extra_plugin_by_env(temp
     assert pl.plugins_context.get(PluginTestP1.NAME)
     assert pl.plugins_context.get(PluginTestP2.NAME), PluginTestP2
     assert pl.plugins_context.get(PluginTestP3.NAME), PluginTestP3
+    assert pl.plugins_context.get(PluginTestP8.NAME), PluginTestP8
 
 
 @pytest.mark.parametrize(
     'temp_named_txt_file', [['plugin_test_p5: {activate: true}', '.yaml']],
     indirect=['temp_named_txt_file'])
-def test_plugin_manager_load_plugin_by_config_file_dependency_not_found(temp_named_txt_file):
+def test_plugin_manager_load_plugin_by_config_file_plugin_dependency_not_found(temp_named_txt_file):
     with pytest.raises(PluginRequirementNotFound):
         PluginManager().load_plugin_by_config_file(temp_named_txt_file.name,
                                                    [plugin_fixture_dir])
 
-
 @pytest.mark.parametrize(
-    'temp_named_txt_file', [['plugin_test_p5: {activate: true}', '.yaml']],
+    'temp_named_txt_file', [['plugin_test_p9: {activate: true}', '.yaml']],
     indirect=['temp_named_txt_file'])
-def test_plugin_manager_load_plugin_by_config_file_dependency_invalid_type(temp_named_txt_file):
-
-    class OtherType:
-        pass
-
-    pl = PluginManager()
-    pl.plugins_context.add('plugin_test_requirement', OtherType())
-
-    with pytest.raises(PluginRequirementInvalidType):
-        pl.load_plugin_by_config_file(temp_named_txt_file.name,
-                                      [plugin_fixture_dir])
+def test_plugin_manager_load_plugin_by_config_file_object_dependency_not_found(temp_named_txt_file):
+    with pytest.raises(PluginRequirementNotFound):
+        PluginManager().load_plugin_by_config_file(temp_named_txt_file.name,
+                                                   [plugin_fixture_dir])
 
 
 @pytest.mark.parametrize(
