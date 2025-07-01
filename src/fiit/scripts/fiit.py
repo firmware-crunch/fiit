@@ -73,10 +73,11 @@ def main() -> None:
     parser_jupiter_console = subparsers.add_parser(
         SUB_PARSER_JUPITER_CONSOLE,
         help=(
-            'Run and connect a Jupiter Console to a fiit remote IPykernel. '
-            'To work the remote fiit instance must setup a '
-            '"plugin_emulator_shell" with the "remote_ipykernel" option set to'
-            ' true, and a "plugin_backend".'))
+            'Run and connect a Jupiter Console to a remote fiit session '
+            'launched with the "plugin_emulator_shell" configured with the '
+            '"remote_ipykernel" option set to true (the remote fiit session '
+            'must be run with the "plugin_backend").'
+        ))
     parser_jupiter_console.add_argument(
         '--backend-ip', required=True, help='fiit backend IP address.')
     parser_jupiter_console.add_argument(
