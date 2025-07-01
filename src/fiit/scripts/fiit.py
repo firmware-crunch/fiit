@@ -29,11 +29,11 @@ from fiit.core.plugin import PluginManager
 from fiit.frontend.jupyter.jupyter_console import jupyter_console
 
 
-SUB_PARSER_EMU = 'emu'
+SUB_PARSER_RUN = 'run'
 SUB_PARSER_JUPITER_CONSOLE = 'jupiter-console'
 
 
-def fii_emu(config: str, extra_plugin_path: Union[str, None] = None) -> None:
+def fiit_session(config: str, extra_plugin_path: Union[str, None] = None) -> None:
     FiitLogger()
     plugin_loader = PluginManager()
     plugin_loader.load_plugin_by_config_file(
@@ -57,13 +57,13 @@ def main() -> None:
     subparsers = parser.add_subparsers(required=True, dest='fii_subparser')
 
     ###################################
-    # subparser emu
+    # subparser run
     ###################################
-    parser_emu = subparsers.add_parser(
-        SUB_PARSER_EMU, help='Run a fiit emulation environment.')
-    parser_emu.add_argument(
+    parser_run = subparsers.add_parser(
+        SUB_PARSER_RUN, help='Run a fiit session.')
+    parser_run.add_argument(
         '--config', required=True, help='YAML/JSON configuration file.')
-    parser_emu.add_argument(
+    parser_run.add_argument(
         '--extra-plugin-path', required=False, help='Extra plugin directory',
         default=None)
 
@@ -87,8 +87,8 @@ def main() -> None:
     ###################################
     script_args = parser.parse_args()
 
-    if script_args.fii_subparser == SUB_PARSER_EMU:
-        fii_emu(script_args.config, script_args.extra_plugin_path)
+    if script_args.fii_subparser == SUB_PARSER_RUN:
+        fiit_session(script_args.config, script_args.extra_plugin_path)
     elif script_args.fii_subparser == SUB_PARSER_JUPITER_CONSOLE:
         jupyter_console(script_args.backend_ip, script_args.backend_port)
 
