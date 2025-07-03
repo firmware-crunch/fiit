@@ -50,7 +50,7 @@ setuptools.setup(
         'capstone ==4.0.2',
         'pycparser ==2.20',
         'pycparserext ==2021.1',
-        'cmsis-svd @ git+https://github.com/cmsis-svd/cmsis-svd.git@ca0b0b0#subdirectory=python',
+        'cmsis-svd ==0.6',
         'ipython ==7.26.0',
         'ipykernel ==6.29.4',
         'background-zmq-ipython ==1.20220901.135250',
