@@ -31,7 +31,7 @@ from fiit.unicorn.mmio_tracer import (
 from fiit.core.config_loader import normalize_hex_int64
 import fiit.plugins.context_config as ctx_conf
 from fiit.core.plugin import FiitPlugin, FiitPluginContext
-from fiit.core.shell import EmulatorShell
+from fiit.core.shell import Shell
 
 
 class MmioFilterConfigParser:
@@ -289,7 +289,7 @@ class PluginUnicornMmioTracer(FiitPlugin):
     REQUIREMENTS = [
         ctx_conf.UNICORN_UC.as_require()]
     OPTIONAL_REQUIREMENTS = [
-        ctx_conf.EMULATOR_SHELL.as_require()]
+        ctx_conf.SHELL.as_require()]
     OBJECTS_PROVIDED = [
         ctx_conf.UNICORN_MMIO_TRACER]
     CONFIG_SCHEMA_RULE_SET_REGISTRY = plugin_mmio_rule_set_registry
@@ -323,7 +323,7 @@ class PluginUnicornMmioTracer(FiitPlugin):
             plugin_config['log_show_field_states'])
 
         if emulator_shell := optional_requirements.get('emulator_shell'):
-            emulator_shell = cast(EmulatorShell, emulator_shell)
+            emulator_shell = cast(Shell, emulator_shell)
             UnicornMmioTracerFrontend(mmio_tracer, emulator_shell)
 
         plugins_context.add(ctx_conf.UNICORN_MMIO_TRACER.name, mmio_tracer)
@@ -334,7 +334,7 @@ class PluginUnicornMmioDbg(FiitPlugin):
     REQUIREMENTS = [
         ctx_conf.UNICORN_DBG.as_require()]
     OPTIONAL_REQUIREMENTS = [
-        ctx_conf.EMULATOR_SHELL.as_require()]
+        ctx_conf.SHELL.as_require()]
     OBJECTS_PROVIDED = [
         ctx_conf.UNICORN_MMIO_DBG]
     CONFIG_SCHEMA_RULE_SET_REGISTRY = plugin_mmio_rule_set_registry
@@ -359,9 +359,9 @@ class PluginUnicornMmioDbg(FiitPlugin):
     ):
         mmio_dbg = UnicornMmioDbg(requirements[ctx_conf.UNICORN_DBG.name], **plugin_config)
 
-        if emulator_shell := optional_requirements.get(ctx_conf.EMULATOR_SHELL.name):
-            emulator_shell = cast(EmulatorShell, emulator_shell)
-            emulator_shell.stream_logger_to_shell_stdout(mmio_dbg.LOGGER_NAME)
-            UnicornMmioDbgFrontend(mmio_dbg, emulator_shell)
+        if shell := optional_requirements.get(ctx_conf.SHELL.name):
+            shell = cast(Shell, shell)
+            shell.stream_logger_to_shell_stdout(mmio_dbg.LOGGER_NAME)
+            UnicornMmioDbgFrontend(mmio_dbg, shell)
 
         plugins_context.add(ctx_conf.UNICORN_MMIO_DBG.name, mmio_dbg)

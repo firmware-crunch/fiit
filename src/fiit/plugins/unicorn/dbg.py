@@ -29,7 +29,7 @@ from fiit.core.plugin import FiitPlugin, FiitPluginContext
 class PluginUnicornDbg(FiitPlugin):
     NAME = 'plugin_unicorn_dbg'
     REQUIREMENTS = [ctx_conf.UNICORN_UC.as_require()]
-    OPTIONAL_REQUIREMENTS = [ctx_conf.EMULATOR_SHELL.as_require()]
+    OPTIONAL_REQUIREMENTS = [ctx_conf.SHELL.as_require()]
     OBJECTS_PROVIDED = [ctx_conf.UNICORN_DBG]
     CONFIG_SCHEMA = {NAME: {'type': 'dict'}}
 
@@ -42,7 +42,7 @@ class PluginUnicornDbg(FiitPlugin):
     ):
         dbg = UnicornDbg(requirements[ctx_conf.UNICORN_UC.name])
 
-        if emu_shell := optional_requirements.get(ctx_conf.EMULATOR_SHELL.name):
-            UnicornDbgFrontend(dbg, emu_shell)
+        if shell := optional_requirements.get(ctx_conf.SHELL.name):
+            UnicornDbgFrontend(dbg, shell)
 
         plugins_context.add(ctx_conf.UNICORN_DBG.name, dbg)

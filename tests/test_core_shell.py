@@ -31,13 +31,13 @@ from IPython.core.magic_arguments import argument, magic_arguments
 
 from .fixtures.fixture_utils import get_file_content
 
-from fiit.core.shell import register_alias, CustomShell
+from fiit.core.shell import register_alias, Shell
 
 
 @IPython.core.magic.magics_class
 class PartialShell(IPython.core.magic.Magics):
     def __init__(self):
-        self.shell = CustomShell()
+        self.shell = Shell()
         self.shell.initialize_shell('test-shell >>> ')
         super(PartialShell, self).__init__(self.shell)
         self.shell.register_magics(self)

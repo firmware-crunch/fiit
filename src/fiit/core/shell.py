@@ -19,8 +19,7 @@
 #
 ################################################################################
 
-
-from typing import Dict, Callable, Any, Optional, Union
+from typing import Dict, Callable, Any, Optional
 import inspect
 import threading
 import logging
@@ -29,11 +28,12 @@ import sys
 from tabulate import tabulate
 
 import IPython
-from IPython.core.magic import Magics, magics_class
+from IPython.core.magic import Magics
 from IPython.terminal.embed import InteractiveShellEmbed
 from IPython.terminal.prompts import Prompts, Token
 
 from ipykernel.iostream import OutStream
+from ipykernel.ipkernel import IPythonKernel
 
 import background_zmq_ipython
 from background_zmq_ipython import IPythonBackgroundKernelWrapper
@@ -54,6 +54,19 @@ class OurOutStream:
 setattr(background_zmq_ipython.kernel, 'OurOutStream', OurOutStream)
 
 
+def _get_zmq_ipython_shell(
+    wrapper: IPythonBackgroundKernelWrapper
+) -> IPythonKernel:
+    """
+    Workaround to extract shell from a IPythonBackgroundKernelWrapper thread.
+    """
+    while True:
+        wrapper.thread.join(0.1)
+        if wrapper._kernel is not None:
+            if wrapper._kernel.shell is not None:
+                return wrapper._kernel.shell
+
+
 def register_alias(alias_name):
     def wrap(func):
         func.__IPYTHON_ALIAS__ = alias_name
@@ -61,14 +74,21 @@ def register_alias(alias_name):
     return wrap
 
 
-@magics_class
-class CustomShell(IPython.core.magic.Magics):
-    LOGIN_BANNER = '    >>> fiit remote ipykernel <<<\n'
+class ShellLogFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord):
+        record.name = record.name.split('.', 1)[1]
+        return True
+
+
+@IPython.core.magic.magics_class
+class Shell(IPython.core.magic.Magics):
+    SHELL_TOKEN = 'fiit >>> '
+    LOGIN_BANNER = ''
     BLANK_LINE = ['___BLANK___', '', '']
 
     def __init__(self, shell=None, remote_ipykernel: bool = False,
                  allow_remote_connection: bool = False, **kwargs):
-        super(CustomShell, self).__init__(shell=shell, **kwargs)
+        super(Shell, self).__init__(shell=shell, **kwargs)
         self.local_ns: Dict[str, Callable] = {}
         self.magic_class_instances: Any = [self]
         self.shell: Optional[InteractiveShellEmbed] = None
@@ -78,6 +98,18 @@ class CustomShell(IPython.core.magic.Magics):
         self._allow_remote_connection: bool = allow_remote_connection
         self._remote_ipykernel_wrapper: \
             Optional[IPythonBackgroundKernelWrapper] = None
+        self._shell_stream: Optional[logging.StreamHandler] = None
+
+        # Prompt lock and events
+        self._prompt_is_unlocked = threading.Event()
+        self._prompt_is_unlocked.set()
+        self._prompt_is_lock = threading.Event()
+        self._prompt_is_lock.clear()
+
+        self.initialize_shell(self.SHELL_TOKEN)
+
+    def stream_logger_to_shell_stdout(self, logger_name: str):
+        logging.getLogger(logger_name).addHandler(self._shell_stream)
 
     def get_remote_ipkernel_client_config(self) -> str:
         with open(self._remote_ipykernel_wrapper.connection_filename) as f:
@@ -109,12 +141,17 @@ class CustomShell(IPython.core.magic.Magics):
                 banner=self.LOGIN_BANNER,
                 allow_remote_connections=self._allow_remote_connection)
             self._remote_ipykernel_wrapper.start()
-            self._remote_ipykernel_wrapper.thread.join(0.5)
-            self.shell = self._remote_ipykernel_wrapper._kernel.shell
+            self.shell = _get_zmq_ipython_shell(self._remote_ipykernel_wrapper)
+
+        self.shell.events.register('post_execute', self._post_execute_hook_lock)
 
         self.shell.prompts = PromptShell(self.shell)
         self.register_magics(self)
         self.register_aliases(self)
+
+        self._shell_stream = logging.StreamHandler(sys.stdout)
+        self._shell_stream.addFilter(ShellLogFilter())
+        self._shell_stream.setFormatter(logging.Formatter('%(name)s: %(message)s'))
 
     def start_shell(self, msg: str = None):
         if self.shell is not None:
@@ -127,6 +164,20 @@ class CustomShell(IPython.core.magic.Magics):
             else:
                 self.shell.mainloop(local_ns=self.local_ns)
             self._is_running = False
+
+    def _post_execute_hook_lock(self):
+        self._prompt_is_unlocked.wait()
+
+    def wait_for_prompt_suspend(self):
+        self._prompt_is_lock.wait()
+
+    def suspend(self):
+        self._prompt_is_unlocked.clear()
+        self._prompt_is_lock.set()
+
+    def resume(self):
+        self._prompt_is_unlocked.set()
+        self._prompt_is_lock.clear()
 
     def map_object_in_shell(self, name: str, obj: Any):
         if self._is_running:
@@ -182,107 +233,8 @@ class CustomShell(IPython.core.magic.Magics):
     @IPython.core.magic.line_magic
     def shell_objects(self, line: str):
         """
-        Shell objects register via `CustomShell.map_object_in_shell` interface.
+        Shell objects register via `Shell.map_object_in_shell` interface.
         """
         print('')
         for name, obj in self.shell_object_refs.items():
             print(f'{name} : {type(obj)}')
-
-
-class EmulatorShellLogFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord):
-        record.name = record.name.split('.', 1)[1]
-        return True
-
-
-class EmulatorShell(CustomShell):
-    ROOT_LOGGER = 'fiit'
-
-    def __init__(self, remote_ipykernel: bool = False,
-                 allow_remote_connection: bool = False):
-        super().__init__(
-            remote_ipykernel=remote_ipykernel,
-            allow_remote_connection=allow_remote_connection
-        )
-        ########################################################################
-        # Shell config
-        ########################################################################
-        self.initialize_shell('fiit >>> ')
-        # self.shell.register_magics(self)
-        # self.shell.register_aliases(self)
-
-        ########################################################################
-        # Emulation thread and locks
-        ########################################################################
-        self._emu_tread: Union[threading.Thread, None] = None
-        self._lock_user_interact = threading.Lock()
-        self._lock_emu_exec = threading.Lock()
-
-        self._emulation_func: Union[Callable, None] = None
-        self._emulation_func_args = tuple()
-        self._emulation_func_kwargs = dict()
-
-        self.shell.events.register(
-             'post_execute', self._wait_for_user_interact)
-
-        ########################################################################
-        # Logs redirection to shell output
-        ########################################################################
-        self._shell_stream = logging.StreamHandler(sys.stdout)
-        self._shell_log_filter = EmulatorShellLogFilter()
-        self._shell_stream.addFilter(self._shell_log_filter)
-        self._shell_stream.setFormatter(logging.Formatter('%(name)s: %(message)s'))
-
-    def stream_logger_to_shell_stdout(self, logger_name: str):
-        logging.getLogger(logger_name).addHandler(self._shell_stream)
-
-    def set_emulation_thread(
-        self, emulation_func: Callable = None, args: tuple = None,
-        kwargs: dict = None
-    ):
-        self._emulation_func = emulation_func
-        self._emulation_func_args = args if args else tuple()
-        self._emulation_func_kwargs = kwargs if args else dict()
-
-    def start_emulation_thread(self):
-        if self._emulation_func is not None and self._emu_tread is None:
-            self._lock_user_interact.acquire(blocking=True)
-            self._emu_tread = threading.Thread(
-                target=self._emulation_func,
-                args=self._emulation_func_args,
-                kwargs=self._emulation_func_kwargs,
-                daemon=True)
-            self._emu_tread.start()
-            threading.Thread(target=self._emulation_join, daemon=True).start()
-
-    def emulation_thread_is_running(self) -> bool:
-        return (
-            True if self._emu_tread is not None and self._emu_tread.is_alive()
-            else False)
-
-    def _emulation_join(self):
-        if self._emu_tread.is_alive():
-            self._emu_tread.join()
-
-        self._emu_tread = None
-        self._lock_user_interact.release()
-
-    def _wait_for_user_interact(self):
-        if self._lock_user_interact.locked():
-            self._lock_user_interact.acquire(blocking=True)
-            self._lock_user_interact.release()
-
-    def resume_user_interact(self):
-        """ Use in emulation event handler to prompt a shell. This function
-        block until resume_emu_exec will be called.
-        """
-        self._lock_emu_exec.acquire(blocking=True)
-        self._lock_user_interact.release()
-
-        self._lock_emu_exec.acquire(blocking=True)
-        self._lock_emu_exec.release()
-
-    def resume_emu_exec(self):
-        """ Use in shell command to block the shell prompt. """
-        self._lock_user_interact.acquire(blocking=True)
-        self._lock_emu_exec.release()

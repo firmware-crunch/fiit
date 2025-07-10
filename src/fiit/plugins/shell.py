@@ -21,9 +21,10 @@
 
 from typing import Optional, Dict, Any, Union
 
-from fiit.core.shell import EmulatorShell
-from fiit.core.plugin import FiitPlugin, FiitPluginContext, ContextObject
+from fiit.core.shell import Shell
+from fiit.core.plugin import FiitPlugin, FiitPluginContext
 import fiit.plugins.context_config as ctx_conf
+
 
 class ShellPluginsContext:
     def __repr__(self):
@@ -32,9 +33,9 @@ class ShellPluginsContext:
          )
 
 
-class PluginEmulatorShell(FiitPlugin):
-    NAME = 'plugin_emulator_shell'
-    OBJECTS_PROVIDED = [ctx_conf.EMULATOR_SHELL]
+class PluginShell(FiitPlugin):
+    NAME = 'plugin_shell'
+    OBJECTS_PROVIDED = [ctx_conf.SHELL]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -49,7 +50,7 @@ class PluginEmulatorShell(FiitPlugin):
     }
 
     def __init__(self):
-        self.emu_shell: Optional[EmulatorShell] = None
+        self.shell: Optional[Shell] = None
         self.context: Union[Dict[str, Any], None] = None
 
     def plugin_load(
@@ -59,8 +60,8 @@ class PluginEmulatorShell(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        self.emu_shell = EmulatorShell(**plugin_config)
-        plugins_context.add(ctx_conf.EMULATOR_SHELL.name, self.emu_shell)
+        self.shell = Shell(**plugin_config)
+        plugins_context.add(ctx_conf.SHELL.name, self.shell)
         plugins_context.program_entry = self.plugin_program_entry
         self.context = plugins_context.context
 
@@ -70,5 +71,5 @@ class PluginEmulatorShell(FiitPlugin):
         for name, obj in self.context.items():
             setattr(plugins_context, name, obj)
 
-        self.emu_shell.map_object_in_shell('plugins_context', plugins_context)
-        self.emu_shell.start_shell()
+        self.shell.map_object_in_shell('plugins_context', plugins_context)
+        self.shell.start_shell()

@@ -23,7 +23,7 @@ import pytest
 
 from .fixtures.fixture_utils import temp_named_txt_file
 
-from fiit.plugins.emulator_shell import EmulatorShell
+from fiit.plugins.shell import Shell
 from fiit.core.plugin import PluginManager
 
 
@@ -55,7 +55,7 @@ def test_load_plugin_unicorn_emulator(temp_named_txt_file, capsys):
     indirect=['temp_named_txt_file'])
 def test_load_plugin_unicorn_emulator_with_frontend(temp_named_txt_file, capsys):
     pl = PluginManager()
-    pl.plugins_context.add('emulator_shell', EmulatorShell())
+    pl.plugins_context.add('shell', Shell())
     pl.load_plugin_by_config_file(temp_named_txt_file.name)
     assert pl.plugins_context.get('plugin_unicorn_emulator') is not None
     uc = pl.plugins_context.get('unicorn_uc')

@@ -26,7 +26,7 @@ from unittest.mock import patch
 
 from .fixtures.fixture_utils import temp_named_txt_file
 
-from fiit.plugins.emulator_shell import ShellPluginsContext
+from fiit.plugins.shell import ShellPluginsContext
 from fiit.core.plugin import PluginManager
 
 
@@ -37,13 +37,13 @@ def test_plugin_context_repr():
 
 
 @pytest.mark.parametrize(
-    'temp_named_txt_file', [['plugin_emulator_shell: {}', '.yaml']],
+    'temp_named_txt_file', [['plugin_shell: {}', '.yaml']],
     indirect=['temp_named_txt_file'])
-def test_load_plugin_emulator_shell(temp_named_txt_file, capsys):
+def test_load_plugin_shell(temp_named_txt_file, capsys):
     pl = PluginManager()
     pl.load_plugin_by_config_file(temp_named_txt_file.name)
 
-    assert pl.plugins_context.get('plugin_emulator_shell') is not None
+    assert pl.plugins_context.get('plugin_shell') is not None
 
     with patch('sys.stdin', StringIO('quit\n')):
         pl.plugins_context.program_entry()

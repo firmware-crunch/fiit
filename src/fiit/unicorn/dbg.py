@@ -18,7 +18,7 @@
 # with fiit. If not, see <https://www.gnu.org/licenses/>.
 #
 ################################################################################
-
+import pdb
 from typing import List, Any, Literal, Dict, Callable, Union, cast
 from collections import OrderedDict
 import sys
@@ -44,7 +44,7 @@ from .arch_unicorn import ArchUnicorn
 from fiit.core.shell import register_alias
 from fiit.core.dis_capstone import DisassemblerCapstone, CAPSTONE_CONFIG
 from fiit.core.emulator_types import ADDRESS_FORMAT
-from fiit.core.shell import EmulatorShell
+from fiit.core.shell import Shell
 
 
 @dataclasses.dataclass
@@ -307,7 +307,7 @@ class DbgFormatter:
 
 @IPython.core.magic.magics_class
 class UnicornDbgFrontend(IPython.core.magic.Magics):
-    def __init__(self, dbg: UnicornDbg, emu_shell: EmulatorShell):
+    def __init__(self, dbg: UnicornDbg, shell: Shell):
         #####################################
         # Debugger Callbacks Settings
         #####################################
@@ -317,11 +317,11 @@ class UnicornDbgFrontend(IPython.core.magic.Magics):
         #####################################
         # Shell Init
         #####################################
-        super(UnicornDbgFrontend, self).__init__(shell=emu_shell.shell)
-        self.emu_shell = emu_shell
-        emu_shell.register_magics(self)
-        emu_shell.register_aliases(self)
-        emu_shell.stream_logger_to_shell_stdout(self.dbg.LOGGER_NAME)
+        super(UnicornDbgFrontend, self).__init__(shell=shell.shell)
+        self._shell = shell
+        shell.register_magics(self)
+        shell.register_aliases(self)
+        shell.stream_logger_to_shell_stdout(self.dbg.LOGGER_NAME)
 
         #####################################
         # Output Formatters
@@ -333,26 +333,21 @@ class UnicornDbgFrontend(IPython.core.magic.Magics):
     ):
         if event in [DBG_EVENT_BREAKPOINT, DBG_EVENT_WATCHPOINT,
                      DBG_EVENT_STEP]:
-            self.emu_shell.resume_user_interact()
+            self._shell.resume()
+            self._shell.wait_for_prompt_suspend()
 
     @register_alias('c')
     @IPython.core.magic.line_magic
     def cont(self, line: str):
         """Continue emulation."""
-        if self.emu_shell.emulation_thread_is_running():
-            self.emu_shell.resume_emu_exec()
-        else:
-            print('Emulation is not started.')
+        self._shell.suspend()
 
     @register_alias('s')
     @IPython.core.magic.line_magic
     def step(self, line: str):
         """Steps to the next instruction."""
-        if self.emu_shell.emulation_thread_is_running():
-            self.dbg.set_step()
-            self.emu_shell.resume_emu_exec()
-        else:
-            print('Emulation is not started.')
+        self.dbg.set_step()
+        self._shell.suspend()
 
     @magic_arguments()
     @argument('registers', nargs='*', default=[],

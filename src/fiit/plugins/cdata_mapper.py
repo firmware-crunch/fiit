@@ -33,7 +33,7 @@ from fiit.core.ctypes import (
     CDataMemMapper, CDataMemMapEntry,
     CTYPES_TRANSLATOR_FLAVOR)
 from fiit.core.shell import register_alias
-from .emulator_shell import EmulatorShell
+from .shell import Shell
 import fiit.plugins.context_config as ctx_conf
 from fiit.core.plugin import FiitPlugin, FiitPluginContext
 
@@ -70,17 +70,17 @@ class ShellCDataMemMapper:
 @IPython.core.magic.magics_class
 class CDataMemMapperFrontend(IPython.core.magic.Magics):
     def __init__(
-        self, cdata_mem_mapper: CDataMemMapper, emu_shell: EmulatorShell,
+        self, cdata_mem_mapper: CDataMemMapper, shell: Shell,
         address_formatter
     ):
-        super(CDataMemMapperFrontend, self).__init__(shell=emu_shell.shell)
+        super(CDataMemMapperFrontend, self).__init__(shell=shell.shell)
         self.cdata_memory_mapper = cdata_mem_mapper
-        self.emu_shell = emu_shell
-        emu_shell.register_magics(self)
-        emu_shell.register_aliases(self)
+        self.shell = shell
+        shell.register_magics(self)
+        shell.register_aliases(self)
         shell_cdata_mapper = ShellCDataMemMapper(
             cdata_mem_mapper, address_formatter)
-        emu_shell.map_object_in_shell('cdata_mapping', shell_cdata_mapper)
+        shell.map_object_in_shell('cdata_mapping', shell_cdata_mapper)
 
     @magic_arguments()
     @argument('cdata_type', type=str, help='')
@@ -105,7 +105,7 @@ class PluginCDataMemoryMapper(FiitPlugin):
         ctx_conf.EMULATOR_ADDRESS_SPACE.as_require(),
         ctx_conf.EMULATOR_ARCH.as_require()]
     OPTIONAL_REQUIREMENTS = [
-        ctx_conf.EMULATOR_SHELL.as_require()]
+        ctx_conf.SHELL.as_require()]
     OBJECTS_PROVIDED = [
         ctx_conf.CDATA_MEMORY_MAPPER]
     CONFIG_SCHEMA = {
@@ -154,7 +154,6 @@ class PluginCDataMemoryMapper(FiitPlugin):
 
         plugins_context.add(ctx_conf.CDATA_MEMORY_MAPPER.name, cdata_mem_mapper)
 
-        if emu_shell := optional_requirements.get(ctx_conf.EMULATOR_SHELL.name):
+        if shell := optional_requirements.get(ctx_conf.SHELL.name):
             CDataMemMapperFrontend(
-                cdata_mem_mapper, emu_shell,
-                ADDRESS_FORMAT[arch.mem_bit_size])
+                cdata_mem_mapper, shell, ADDRESS_FORMAT[arch.mem_bit_size])

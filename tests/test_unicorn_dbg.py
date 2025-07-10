@@ -37,7 +37,7 @@ from .fixtures.blobs import (
     BlobArmEl32MemWriteUnmapped, BlobArmEl32IncLoop, BlobArmEl32ReadWriteLoop,
     BlobArmEl32MultiBlock, BlobArmEl64Demo)
 
-from fiit.plugins.emulator_shell import EmulatorShell
+from fiit.plugins.shell import Shell
 from fiit.unicorn.dbg import (
     UnicornDbg, UnicornDbgFrontend,
     DBG_EVENT_BREAKPOINT, DBG_EVENT_STEP, DBG_EVENT_WATCHPOINT,
@@ -345,8 +345,7 @@ def test_frontend_dbg_disassemble(capsys):
         '0x0000000c:\t0a0050e3            \tcmp\tr0, #0xa\n' \
         '0x00000010:\tfcffff1a            \tbne\t#8\n' \
         '0x00000014:\t0110a0e3            \tmov\tr1, #1'
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
     front.disassemble('0x0 6')
     assert capsys.readouterr().out == out
 
@@ -369,8 +368,7 @@ def test_frontend_dbg_mem_read(capsys):
         '000000d0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|\n' \
         '000000e0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|\n' \
         '000000f0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|'
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
     front.mem_read('0x0 256')
     assert capsys.readouterr().out == out
 
@@ -380,31 +378,27 @@ def test_frontend_dbg_mem_read_64(capsys):
           '0000000000000010  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|\n' \
           '0000000000000020  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|\n' \
           '0000000000000030  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|'
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg, Shell())
     front.mem_read('0x0 64')
     assert capsys.readouterr().out == out
 
 
 def test_frontend_dbg_write_word():
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
     front.mem_write('0x50 word 0xdeadbeef')
     assert front.dbg.uc.mem_read(0x50, 4) == b'\xef\xbe\xad\xde'
 
 
 def test_frontend_dbg_write_cstring():
     cstring = 'patched_boot_line("/dev/mp0")'
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
     front.mem_write(f'0x50 cstring {cstring}')
     assert front.dbg.uc.mem_read(0x50, len(cstring)).decode() == cstring
 
 
 def test_register_set():
     expected_value = 0xffeebbcc
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32MultiBlock).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32MultiBlock).dbg, Shell())
     front.register_set(f'r2 {expected_value:#x}')
     assert front.dbg.uc.reg_read(UC_ARM_REG_R2) == expected_value
 
@@ -418,7 +412,7 @@ def test_frontend_dbg_complete_register_get(capsys):
           'pc   0x00000050   cpsr 0x600001d3   '
 
     emu_dbg = BinBlob2Dbg(BlobArmEl32MultiBlock)
-    front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+    front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
     emu_dbg.emu.start()
     front.register_get('')
     assert capsys.readouterr().out == out
@@ -438,7 +432,7 @@ def test_frontend_dbg_complete_register_get_64(capsys):
           'sp   0x0000000000000000   fp   0x0000000000000000   lr   0x0000000000000000   \n' \
           'cpsr 0x0000000040000000   '
     emu_dbg = BinBlob2Dbg(BlobArmEl64Demo)
-    front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+    front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
     emu_dbg.emu.start()
     front.register_get('')
     assert capsys.readouterr().out == out
@@ -448,7 +442,7 @@ def test_frontend_dbg_partial_register_get(capsys):
     out = 'r0   0x00000005   r1   0x00000005   r2   0x00000000   \n' \
           'pc   0x00000050   cpsr 0x600001d3   '
     emu_dbg = BinBlob2Dbg(BlobArmEl32MultiBlock)
-    front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+    front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
     emu_dbg.emu.start()
     front.register_get('r0 r1 r2 pc cpsr')
     assert capsys.readouterr().out == out
@@ -465,13 +459,12 @@ class TestFrontendBreakpointSet:
         self.count = 0
         emu_dbg = BinBlob2Dbg(BlobArmEl32IncLoop,
                               debug_event_callback=self.callback)
-        front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+        front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
 
         # This function is tested
         front.breakpoint_set("0x10 4")
 
-        with patch("fiit.plugins.emulator_shell.EmulatorShell"
-                   ".resume_user_interact"):
+        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
             emu_dbg.emu.start()
 
         assert self.count == 4
@@ -495,13 +488,12 @@ class TestFrontendBreakpointDel:
         self.count = 0
         emu_dbg = BinBlob2Dbg(BlobArmEl32IncLoop,
                               debug_event_callback=self.callback)
-        self.front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+        self.front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
 
         # This function is tested
         self.front.breakpoint_set("0x10 4")
 
-        with patch("fiit.plugins.emulator_shell.EmulatorShell"
-                   ".resume_user_interact"):
+        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
             emu_dbg.emu.start()
 
         assert self.count == 3
@@ -516,8 +508,7 @@ def test_frontend_dbg_breakpoint_print(capsys):
         '  index  address       hit\n'
         '-------  ----------  -----\n'
         '      1  0x00000010      0\n')
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
     front.breakpoint_set('0x10 4')
     front.breakpoint_print('')
     assert capsys.readouterr().out == out
@@ -528,8 +519,7 @@ def test_frontend_dbg_breakpoint_print_64(capsys):
         '  index  address               hit\n'
         '-------  ------------------  -----\n'
         '      1  0x0000000000000004      0\n')
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg, Shell())
     front.breakpoint_set('0x4 4')
     front.breakpoint_print('')
     assert capsys.readouterr().out == out
@@ -553,15 +543,14 @@ class TestFrontendDbgWatchpoint:
                    expected_access: List[str]):
         emu_dbg = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
                               debug_event_callback=self.callback)
-        front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+        front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
 
         # This function is tested
         front.watchpoint_area(f'{access} 0x20 0x24 {int(hit)}')
 
         self.expected_access = expected_access
         self.count = 0
-        with patch("fiit.plugins.emulator_shell.EmulatorShell"
-                   ".resume_user_interact"):
+        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
             emu_dbg.emu.start()
 
         assert self.count == hit
@@ -570,15 +559,14 @@ class TestFrontendDbgWatchpoint:
                   expected_access: List[str]):
         emu_dbg = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
                               debug_event_callback=self.callback)
-        front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+        front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
 
         # This function is tested
         front.watchpoint_var(f'{access} 0x20 {int(hit)}')
 
         self.expected_access = expected_access
         self.count = 0
-        with patch("fiit.plugins.emulator_shell.EmulatorShell"
-                   ".resume_user_interact"):
+        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
             emu_dbg.emu.start()
 
         assert self.count == hit
@@ -659,12 +647,11 @@ class TestFrontendDbgDeleteWatchpoint:
         caplog.set_level(logging.INFO, 'fiit.unicorn_dbg')
         emu_dbg = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
                               debug_event_callback=self.callback)
-        self.front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+        self.front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
         self.front.watchpoint_area('r 0x20 0x24')
         self.count = 0
 
-        with patch("fiit.plugins.emulator_shell.EmulatorShell"
-                   ".resume_user_interact"):
+        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
             emu_dbg.emu.start()
 
         assert self.count == 1
@@ -678,7 +665,7 @@ def test_frontend_dbg_watchpoint_print(capsys):
         '      1  0x00000020  0x00000024  r             0\n'
     )
     front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl32ReadWriteLoop).dbg,
-                               EmulatorShell())
+                               Shell())
     front.watchpoint_area('r 0x20 0x24 5')
     front.watchpoint_print('')
     assert capsys.readouterr().out == out
@@ -690,8 +677,7 @@ def test_frontend_dbg_watchpoint_print_64(capsys):
         '-------  ------------------  ------------------  --------  -----\n'
         '      1  0x0000000000000004  0x0000000000000008  r             0\n'
     )
-    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg,
-                               EmulatorShell())
+    front = UnicornDbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg, Shell())
     front.watchpoint_area('r 0x4 0x8 5')
     front.watchpoint_print('')
     assert capsys.readouterr().out == out
@@ -719,15 +705,10 @@ class TestFrontendDbgSetStepFromBp:
         caplog.set_level(logging.INFO, 'fiit.unicorn_dbg')
         emu_dbg = BinBlob2Dbg(BlobArmEl32MultiBlock,
                               debug_event_callback=self.bp_callback)
-        self.front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+        self.front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
         self.front.breakpoint_set('0x10 1')
         self.bp_count = 0
-        with patch("fiit.plugins.emulator_shell.EmulatorShell"
-                   ".resume_user_interact"), \
-                patch("fiit.plugins.emulator_shell.EmulatorShell"
-                      ".resume_emu_exec"), \
-                patch("fiit.plugins.emulator_shell.EmulatorShell"
-                      ".emulation_thread_is_running", return_value=True):
+        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
             emu_dbg.emu.start()
 
         assert self.bp_count == 3
@@ -749,15 +730,10 @@ class TestFrontendDbgContinueFromBp:
         emu_dbg = BinBlob2Dbg(BlobArmEl32MultiBlock,
                               debug_event_callback=self.bp_callback)
         caplog.set_level(logging.INFO, 'fiit.unicorn_dbg')
-        self.front = UnicornDbgFrontend(emu_dbg.dbg, EmulatorShell())
+        self.front = UnicornDbgFrontend(emu_dbg.dbg, Shell())
         self.front.breakpoint_set('0x10 1')
         self.bp_count = 0
-        with patch("fiit.plugins.emulator_shell.EmulatorShell"
-                   ".resume_user_interact"), \
-                patch("fiit.plugins.emulator_shell.EmulatorShell"
-                      ".resume_emu_exec"), \
-                patch("fiit.plugins.emulator_shell.EmulatorShell"
-                      ".emulation_thread_is_running", return_value=True):
+        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
             emu_dbg.emu.start()
 
         assert self.bp_count == 1

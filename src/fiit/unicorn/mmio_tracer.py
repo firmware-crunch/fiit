@@ -44,7 +44,7 @@ from unicorn.unicorn_const import UC_HOOK_MEM_READ, UC_HOOK_MEM_WRITE
 
 from fiit.core.emulator_types import ADDRESS_FORMAT
 from fiit.core.cmsis_svd import SvdIndex, SvdLoader
-from fiit.core.shell import EmulatorShell
+from fiit.core.shell import Shell
 from .arch_unicorn import (
     ArchUnicorn, MemoryReader, unicorn_fix_issue_972)
 from .dbg import UnicornDbg, DBG_EVENT_WATCHPOINT
@@ -1152,12 +1152,12 @@ class UnicornMmioTracer:
 
 @IPython.core.magic.magics_class
 class UnicornMmioTracerFrontend(IPython.core.magic.Magics):
-    def __init__(self, mmio_tracer: UnicornMmioTracer, emu_shell: EmulatorShell):
+    def __init__(self, mmio_tracer: UnicornMmioTracer, shell: Shell):
         self._mmio_mon = mmio_tracer
-        super(UnicornMmioTracerFrontend, self).__init__(shell=emu_shell.shell)
-        self.emu_shell = emu_shell
-        emu_shell.register_magics(self)
-        emu_shell.register_aliases(self)
+        super(UnicornMmioTracerFrontend, self).__init__(shell=shell.shell)
+        self._shell = shell
+        self._shell.register_magics(self)
+        self._shell.register_aliases(self)
 
     @IPython.core.magic.line_magic
     def mmio_access_count(self, line: str):
@@ -1291,12 +1291,12 @@ class UnicornMmioDbg:
 
 @IPython.core.magic.magics_class
 class UnicornMmioDbgFrontend(IPython.core.magic.Magics):
-    def __init__(self, mmio_dbg: UnicornMmioDbg, emu_shell: EmulatorShell):
+    def __init__(self, mmio_dbg: UnicornMmioDbg, shell: Shell):
         self._mmio_dbg = mmio_dbg
-        super(UnicornMmioDbgFrontend, self).__init__(shell=emu_shell.shell)
-        self.emu_shell = emu_shell
-        emu_shell.register_magics(self)
-        emu_shell.register_aliases(self)
+        super(UnicornMmioDbgFrontend, self).__init__(shell=shell.shell)
+        self._shell = shell
+        self._shell.register_magics(self)
+        self._shell.register_aliases(self)
 
     @magic_arguments()
     @argument('--exclude-from-address', nargs='*', default=[],

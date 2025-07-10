@@ -18,7 +18,7 @@
 # with fiit. If not, see <https://www.gnu.org/licenses/>.
 #
 ################################################################################
-
+import pdb
 from typing import List, Callable, Optional, cast, Dict, Any, Union
 import logging
 import threading
@@ -40,7 +40,7 @@ from fiit.core.emulator_types import (
     DictMemoryRegion, DictMemoryMappedFile, DictMemoryMappedBlob, Architecture,
     ADDRESS_FORMAT)
 from .arch_unicorn import ArchUnicorn
-from fiit.core.shell import register_alias, EmulatorShell
+from fiit.core.shell import register_alias, Shell
 
 
 EXEC_QUANTUM_UNIT_INSN = 1
@@ -112,6 +112,11 @@ class UnicornEmulator:
             for mmb in memory_mapped_blobs:
                 self.mem_map_blob(**mmb)
 
+        ####################################################
+        # Thread Wrapping
+        ####################################################
+        self.emu_tread: Union[threading.Thread, None] = None
+
     def _hook_block_interrupt(self, uc: Uc, address: int, size: int, data: dict):
         # Inconsistent register state during HOOK_BLOCK callback
         # https://github.com/unicorn-engine/unicorn/issues/1643
@@ -128,6 +133,12 @@ class UnicornEmulator:
         self._exec_quantum_unit = exec_quantum_unit
         self._exec_quantum = exec_quantum
         self._interrupt_callback = interrupt_callback
+
+    def start_in_thread(self) -> threading.Thread:
+        if not self.is_running and self.emu_tread is None:
+            self.emu_tread = threading.Thread(target=self.start, daemon=True)
+            self.emu_tread.start()
+            return self.emu_tread
 
     def start(self):
         if self.entry_point is not None and self.end_address is not None:
@@ -260,17 +271,15 @@ class UnicornEmulatorFrontend(IPython.core.magic.Magics):
     # Uc.emu_stop() doesn't work in a hook if PC is updated
     # https://github.com/unicorn-engine/unicorn/issues/1579
 
-    def __init__(self, emu: UnicornEmulator, emu_shell: EmulatorShell):
+    def __init__(self, emu: UnicornEmulator, shell: Shell):
         self.emu = emu
-        self.emu_shell = emu_shell
+        self._shell = shell
         self.emu_tread: Union[threading.Thread, None] = None
         self._addr_f = ADDRESS_FORMAT[self.emu.arch.mem_bit_size]
 
-        self.emu_shell.set_emulation_thread(self.emu.start)
-
-        super(UnicornEmulatorFrontend, self).__init__(shell=emu_shell.shell)
-        emu_shell.register_magics(self)
-        emu_shell.register_aliases(self)
+        super(UnicornEmulatorFrontend, self).__init__(shell=shell.shell)
+        shell.register_magics(self)
+        shell.register_aliases(self)
 
     def _mem_map_format(self, memory_mapping: AddressSpace) -> str:
         headers = ['start', 'end', 'size', 'name']
@@ -287,11 +296,18 @@ class UnicornEmulatorFrontend(IPython.core.magic.Magics):
         """Print memory mapping."""
         print(self._mem_map_format(self.emu.address_space))
 
+    def _emu_end(self):
+        self.emu.emu_tread.join()
+        self._shell.resume()
+
     @register_alias('es')
     @IPython.core.magic.line_magic
     def emu_start(self, line: str):
         """Start emulation."""
         if not self.emu.is_running:
-            self.emu_shell.start_emulation_thread()
+            print('')
+            self._shell.suspend()
+            self.emu.start_in_thread()
+            threading.Thread(target=self._emu_end).start()
         else:
             print('Emulator is already running.')

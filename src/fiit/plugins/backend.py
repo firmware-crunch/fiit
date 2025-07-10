@@ -32,7 +32,7 @@ import traceback
 import zmq
 import cerberus
 
-from fiit.core.shell import EmulatorShell
+from fiit.core.shell import Shell
 import fiit.plugins.context_config as ctx_conf
 from fiit.core.plugin import FiitPlugin, FiitPluginContext, ObjectRequirement
 
@@ -365,7 +365,7 @@ class Backend:
 class PluginBackend(FiitPlugin):
     NAME = 'plugin_backend'
     OPTIONAL_REQUIREMENTS = [
-        ctx_conf.EMULATOR_SHELL.as_require()]
+        ctx_conf.SHELL.as_require()]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -389,7 +389,7 @@ class PluginBackend(FiitPlugin):
         backend = Backend(**plugin_config)
 
         with BackendDataContext() as backend_data:
-            if emulator_shell := plugins_context.get(ctx_conf.EMULATOR_SHELL.name):
+            if emulator_shell := plugins_context.get(ctx_conf.SHELL.name):
                 if emulator_shell._remote_ipykernel:
                     backend_data.jupiter_client_json_config = \
                         emulator_shell.get_remote_ipkernel_client_config()

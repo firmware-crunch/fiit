@@ -22,7 +22,7 @@
 import unicorn
 
 from fiit.core.plugin import ContextObject
-from fiit.core.shell import EmulatorShell
+from fiit.core.shell import Shell
 from fiit.core.emulator_types import AddressSpace
 from fiit.core.emulator_types import Architecture
 from fiit.core.ctypes import CDataMemMapper
@@ -37,10 +37,9 @@ from fiit.unicorn.function_hooking_engine import UnicornFunctionHookingEngine
 from fiit.unicorn.function_tracer import UnicornFunctionTracer
 
 
-
 UNICORN_UC = ContextObject('unicorn_uc', unicorn.Uc)
 
-EMULATOR_SHELL = ContextObject('emulator_shell', EmulatorShell)
+SHELL = ContextObject('shell', Shell)
 EMULATOR_ADDRESS_SPACE = ContextObject('emulator_address_space', AddressSpace)
 EMULATOR_ARCH = ContextObject('emulator_arch', Architecture)
 CDATA_MEMORY_MAPPER = ContextObject('cdata_memory_mapper', CDataMemMapper)

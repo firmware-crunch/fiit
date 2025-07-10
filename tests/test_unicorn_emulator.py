@@ -18,7 +18,7 @@
 # with fiit. If not, see <https://www.gnu.org/licenses/>.
 #
 ################################################################################
-
+import pdb
 from io import StringIO
 from typing import Type
 import tempfile
@@ -32,7 +32,7 @@ from unicorn.unicorn_const import UC_ERR_INSN_INVALID
 from fiit.unicorn.emulator import (
     UnicornEmulator, UnicornEmulatorFrontend,
     EXEC_QUANTUM_UNIT_BLOCK, EXEC_QUANTUM_UNIT_INSN, EXEC_QUANTUM_UNIT_US)
-from fiit.plugins.emulator_shell import EmulatorShell
+from fiit.plugins.shell import Shell
 
 from .fixtures.blobs.meta_bin_blob import MetaBinBlob
 from .fixtures.blobs import (
@@ -205,7 +205,7 @@ def test_emulator_unicorn_frontend_memory_mapping(capsys):
         '----------  ----------  ----------  ------\n'
         '0x00000000  0x00000fff  0x00001000  rom\n'
     )
-    shell = EmulatorShell()
+    shell = Shell()
     emu = UnicornEmulator(
         BlobArmEl32MultiBlock.arch_unicorn,
         BlobArmEl32MultiBlock.mem_map,
@@ -221,7 +221,7 @@ def test_emulator_unicorn_frontend_memory_mapping_64bit(capsys):
         '------------------  ------------------  ------------------  ------\n'
         '0x0000000000000000  0x0000000000000fff  0x0000000000001000  rom\n'
     )
-    shell = EmulatorShell()
+    shell = Shell()
     emu = UnicornEmulator(
         BlobArmEl64Demo.arch_unicorn,
         BlobArmEl64Demo.mem_map,
@@ -252,14 +252,14 @@ class TestFrontEmuStart:
             entry_point=BlobArmEl32MultiBlock.emu_start,
             end_address=BlobArmEl32MultiBlock.emu_end)
 
-        self.emu_shell = EmulatorShell()
-        self.front = UnicornEmulatorFrontend(self.emu, self.emu_shell)
+        self.shell = Shell()
+        self.front = UnicornEmulatorFrontend(self.emu, self.shell)
 
         with patch('sys.stdin', StringIO('emu_start\nquit\n')):
-            self.emu_shell.start_shell()
+            self.shell.start_shell()
 
         assert (capsys.readouterr().out
-                == '\nfiit >>> '
+                == '\nfiit >>> \n'
                    'Emulator is already running.\n'
                    '\nfiit >>> ')
 
