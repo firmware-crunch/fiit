@@ -7,7 +7,7 @@ test-shell >>>
     
     %help                   %h       Print this help
     
-    %shell_objects          %so      Shell objects register via `CustomShell.map_object_in_shell` interface.
+    %shell_objects          %so      Shell objects register via `Shell.map_object_in_shell` interface.
     
     %test_cmd               %tc      %test_cmd cmd_arg1
     
