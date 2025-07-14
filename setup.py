@@ -69,7 +69,8 @@ setuptools.setup(
     },
     entry_points={
         'console_scripts': [
-            'fiit=fiit.scripts.fiit:main'
+            'fiit=fiit.scripts.fiit:main',
+            'fiit_console=fiit.frontend.fiit_console:fiit_console'
         ]
     },
     zip_safe=False,

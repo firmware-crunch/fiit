@@ -50,7 +50,7 @@ class EventQueueInfo:
 @dataclasses.dataclass
 class BackendData:
     event_queue_info: EventQueueInfo = dataclasses.field(default_factory=EventQueueInfo)
-    jupiter_client_json_config: Optional[str] = None
+    jupyter_client_json_config: Optional[str] = None
 
 
 class ThreadSafeSingleton(type):
@@ -361,6 +361,8 @@ class Backend:
 # Backend Plugin
 ################################################################################
 
+BACKEND_REQUEST_DEFAULT_PORT = 2560
+
 
 class PluginBackend(FiitPlugin):
     NAME = 'plugin_backend'
@@ -373,7 +375,8 @@ class PluginBackend(FiitPlugin):
             'schema': {
                 'allow_remote_connection': {'type': 'boolean', 'default': True,
                                             'required': False},
-                'request_port': {'type': 'integer', 'required': True},
+                'request_port': {'type': 'integer', 'required': False,
+                                 'default': BACKEND_REQUEST_DEFAULT_PORT},
                 'event_pub_port': {'type': 'integer', 'required': True},
             }
         }
@@ -391,7 +394,7 @@ class PluginBackend(FiitPlugin):
         with BackendDataContext() as backend_data:
             if emulator_shell := plugins_context.get(ctx_conf.SHELL.name):
                 if emulator_shell._remote_ipykernel:
-                    backend_data.jupiter_client_json_config = \
+                    backend_data.jupyter_client_json_config = \
                         emulator_shell.get_remote_ipkernel_client_config()
 
         backend.run_backend_request_loop()

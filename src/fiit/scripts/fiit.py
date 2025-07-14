@@ -26,11 +26,12 @@ from importlib import metadata
 
 from fiit.core.logger import FiitLogger
 from fiit.core.plugin import PluginManager
-from fiit.frontend.jupyter.jupyter_console import jupyter_console
+from fiit.frontend.fiit_console import fiit_console_from_backend
+from fiit.plugins import backend
 
 
 SUB_PARSER_RUN = 'run'
-SUB_PARSER_JUPITER_CONSOLE = 'jupiter-console'
+SUB_PARSER_CONSOLE = 'console'
 
 
 def fiit_session(config: str, extra_plugin_path: Union[str, None] = None) -> None:
@@ -70,18 +71,19 @@ def main() -> None:
     ###################################
     # subparser jupiter-console
     ###################################
-    parser_jupiter_console = subparsers.add_parser(
-        SUB_PARSER_JUPITER_CONSOLE,
+    parser_console = subparsers.add_parser(
+        SUB_PARSER_CONSOLE,
         help=(
-            'Run and connect a Jupiter Console to a remote fiit session '
-            'launched with the "plugin_emulator_shell" configured with the '
-            '"remote_ipykernel" option set to true (the remote fiit session '
-            'must be run with the "plugin_backend").'
-        ))
-    parser_jupiter_console.add_argument(
+            'Run and connect a Jupyter Console to a remote Jupyter kernel '
+            'hosted in a fiit session launched by the "plugin_shell"'
+            'configured with the "remote_ipykernel" option set to true (the '
+            'remote fiit session must be run with the "plugin_backend" to '
+            'retrieve the Jupyter kernel connection information).'))
+    parser_console.add_argument(
         '--backend-ip', required=True, help='fiit backend IP address.')
-    parser_jupiter_console.add_argument(
-        '--backend-port', required=True, help='fiit backend port number.')
+    parser_console.add_argument(
+        '--backend-port', required=False, help='fiit backend port number.',
+        default=backend.BACKEND_REQUEST_DEFAULT_PORT)
 
     ###################################
     # parsing
@@ -90,8 +92,8 @@ def main() -> None:
 
     if script_args.fii_subparser == SUB_PARSER_RUN:
         fiit_session(script_args.config, script_args.extra_plugin_path)
-    elif script_args.fii_subparser == SUB_PARSER_JUPITER_CONSOLE:
-        jupyter_console(script_args.backend_ip, script_args.backend_port)
+    elif script_args.fii_subparser == SUB_PARSER_CONSOLE:
+        fiit_console_from_backend(script_args.backend_ip, script_args.backend_port)
 
 
 if __name__ == '__main__':
