@@ -26,8 +26,8 @@ from importlib import metadata
 
 from fiit.core.logger import FiitLogger
 from fiit.core.plugin import PluginManager
-from fiit.frontend.fiit_console import fiit_console_from_backend
 from fiit.plugins import backend
+from .fiit_console import fiit_console_from_backend
 
 
 SUB_PARSER_RUN = 'run'
