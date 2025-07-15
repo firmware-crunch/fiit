@@ -18,8 +18,8 @@
 # with fiit. If not, see <https://www.gnu.org/licenses/>.
 #
 ################################################################################
-import pdb
-from typing import List, Any, Literal, Dict, Callable, Union, cast
+
+from typing import List, Any, Literal, Dict, Callable, Optional, Tuple
 from collections import OrderedDict
 import sys
 import struct
@@ -313,6 +313,7 @@ class UnicornDbgFrontend(IPython.core.magic.Magics):
         #####################################
         self.dbg = dbg
         dbg.debug_event_callbacks.append(self.debug_event_callback)
+        self._current_event: Optional[Tuple[int, dict]] = None
 
         #####################################
         # Shell Init
@@ -333,21 +334,29 @@ class UnicornDbgFrontend(IPython.core.magic.Magics):
     ):
         if event in [DBG_EVENT_BREAKPOINT, DBG_EVENT_WATCHPOINT,
                      DBG_EVENT_STEP]:
+            self._current_event = (event, args)
             self._shell.resume()
             self._shell.wait_for_prompt_suspend()
+            self._current_event = None
 
     @register_alias('c')
     @IPython.core.magic.line_magic
     def cont(self, line: str):
         """Continue emulation."""
-        self._shell.suspend()
+        if self._current_event is not None:
+            self._shell.suspend()
+        else:
+            print('Emulation is not started.')
 
     @register_alias('s')
     @IPython.core.magic.line_magic
     def step(self, line: str):
         """Steps to the next instruction."""
-        self.dbg.set_step()
-        self._shell.suspend()
+        if self._current_event is not None:
+            self.dbg.set_step()
+            self._shell.suspend()
+        else:
+            print('Emulation is not started.')
 
     @magic_arguments()
     @argument('registers', nargs='*', default=[],

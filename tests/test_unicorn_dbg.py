@@ -685,6 +685,7 @@ def test_frontend_dbg_watchpoint_print_64(capsys):
 
 class TestFrontendDbgSetStepFromBp:
     def bp_callback(self, dbg: UnicornDbg, event_id: int, args: dict):
+        self.front._current_event = (event_id, args)
         self.bp_count += 1
         assert self.bp_count < 4
 
