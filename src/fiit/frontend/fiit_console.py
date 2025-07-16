@@ -32,6 +32,7 @@ import zmq
 
 from prompt_toolkit.application import get_app_or_none
 
+from jupyter_console.utils import run_sync
 from jupyter_console.ptshell import ZMQTerminalInteractiveShell, ask_yes_no
 from jupyter_console.app import ZMQTerminalIPythonApp
 from jupyter_client.consoleapp import JupyterConsoleApp
@@ -54,17 +55,13 @@ class SynchronizedZmqTerminal(ZMQTerminalInteractiveShell):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        # cache
-        self._iopub_msg_cache: Optional[dict] = None
-
-        # Warning: asyncio.Event must be initialized in the event loop
-        self._is_running_cell: Optional[asyncio.Event] = None
+        # Warning: asyncio sync primitives must be initialized in the event loop
+        self._iopub_channel_lock: Optional[asyncio.Lock] = None
         self._interact_lock: Optional[asyncio.Event] = None
         self._is_interact_loop_stopped: Optional[asyncio.Event] = None
 
         self._full_echo = os.getenv('FULL_ECHO', False)
         self._other_is_running_cell_with_echo = False
-        self._other_is_running_cell = False
 
     def init_kernel_info(self):
         """ Subclassed to print stdout/stderr stream if kernel is busy. """
@@ -87,30 +84,17 @@ class SynchronizedZmqTerminal(ZMQTerminalInteractiveShell):
 
             elif socks.get(iopub_socket) == zmq.POLLIN:
                 msg = self.client.iopub_channel.get_msg()
-                if msg['header']['msg_type'] == 'stream':
-                    if msg['content']['name'] == "stdout":
-                        print(msg['content']['text'], end='', flush=True)
-                    elif msg['content']['name'] == 'stderr':
-                        print(msg['content']['text'], end='', flush=True)
+                self._custom_iopub_msg_renderer(msg)
 
     def _init_events(self):
-        self._is_running_cell = asyncio.Event()
+        self._iopub_channel_lock = asyncio.Lock()
         self._is_interact_loop_stopped = asyncio.Event()
         self._interact_lock = asyncio.Event()
-        self._is_running_cell.clear()
         self._is_interact_loop_stopped.clear()
         self._interact_lock.clear()
 
-    @property
-    def interact_loop_is_locked(self) -> bool:
-        return self._is_interact_loop_stopped.is_set()
-
-    @property
-    def cell_is_running(self) -> bool:
-        return self._is_running_cell.is_set()
-
     async def lock_interact_loop(self):
-        if not self.interact_loop_is_locked and not self.cell_is_running:
+        if not self._is_interact_loop_stopped.is_set():
             app = get_app_or_none()
             if not app.is_done and app.is_running:
                 self._interact_lock.clear()
@@ -118,7 +102,7 @@ class SynchronizedZmqTerminal(ZMQTerminalInteractiveShell):
                 await self._is_interact_loop_stopped.wait()
 
     def unlock_interact_loop(self):
-        if self.interact_loop_is_locked:
+        if self._is_interact_loop_stopped.is_set():
             self._interact_lock.set()
 
     async def interact(self, loop=None, display_banner=None):
@@ -142,15 +126,15 @@ class SynchronizedZmqTerminal(ZMQTerminalInteractiveShell):
 
             else:
                 if code:
-                    self._is_running_cell.set()
-                    self.run_cell(code, store_history=True)
-                    self._is_running_cell.clear()
+                    async with self._iopub_channel_lock:
+                        self.run_cell(code, store_history=True)
 
     async def handle_external_iopub(self, loop=None):
         """
-        Override to fix inefficient and slow manual polling in parent method,
-        and allow post jupyter message render with asynchronous capability in
-        same event loop (for exemple for asynchronous event sync).
+        Override to: fix inefficient and slow manual iopub channel polling in
+        parent method, provides exclusive access to the iopub channel to avoid
+        conflict with running cell from here, and call a custom Jupyter
+        external message processing method.
         """
         self._init_events()
         poller = zmq.asyncio.Poller()
@@ -159,67 +143,38 @@ class SynchronizedZmqTerminal(ZMQTerminalInteractiveShell):
         while self.keep_running:
             events = dict(await poller.poll(0.5))
 
-            if self.client.iopub_channel.socket in events:
-                self.handle_iopub()
-                await self._post_jupyter_message_render(self._iopub_msg_cache)
-
-    async def _post_jupyter_message_render(self, msg: dict) -> None:
-        msg = self._iopub_msg_cache
-        msg_type = msg['header']['msg_type']
-
-        if (msg_type == 'execute_input'
-                and self._other_is_running_cell_with_echo):
-            await self.lock_interact_loop()
-            content = self._iopub_msg_cache['content']
-            ec = content.get('execution_count',
-                             self.execution_count - 1)
-
-            if self._pending_clearoutput:
-                print("\r", end="")
-                sys.stdout.flush()
-                sys.stdout.flush()
-                self._pending_clearoutput = False
-
-            sys.stdout.write(f'Remote In [{ec}]: {content["code"]}\n')
-            sys.stdout.flush()
-
-        elif not self._other_is_running_cell_with_echo:
-            self.unlock_interact_loop()
-
-    def _include_output(self, msg: dict) -> bool:
-        self._set_terminal_states(msg)
-        msg_type = msg['header']['msg_type']
-
-        if self._other_is_running_cell_with_echo and msg_type == 'execute_input':
-            return False  # input render from handle_iopub() is bugged for other
-        elif self._other_is_running_cell and not self._other_is_running_cell_with_echo:
-            return False  # no render for other cell running without echo
-
-        return super().include_output(msg)
-
-    def _msg_cache_wrapper(self, msg: dict) -> bool:
-        ret = self._include_output(msg)
-        self._iopub_msg_cache = msg
-        return ret
+            if (not self._iopub_channel_lock.locked()
+                    and self.client.iopub_channel.socket in events):
+                async with self._iopub_channel_lock:
+                    await self._external_iopub_custom_processing()
 
     def include_output(self, msg: dict) -> bool:
-        """
-        `Include_output()` is the best place to capture iopub message since this
-        method is called just after read message on the channel iopub channel
-        in `handle_iopub()`.
-        """
-        return self._msg_cache_wrapper(msg)
+        # Disable handling of external message by the parent class.
+        return super().include_output(msg) if self.from_here(msg) else False
+
+    async def _external_iopub_custom_processing(self):
+        while run_sync(self.client.iopub_channel.msg_ready)():
+            sub_msg = run_sync(self.client.iopub_channel.get_msg)()
+            self._set_terminal_states(sub_msg)
+
+            if self._other_is_running_cell_with_echo:
+                await self.lock_interact_loop()
+                self._custom_iopub_msg_renderer(sub_msg)
+            elif (not self._other_is_running_cell_with_echo
+                  and self._is_interact_loop_stopped.is_set()):
+                self.unlock_interact_loop()
 
     def _set_terminal_states(self, msg: dict) -> None:
-        """
-        Warning:
-        This methods set the states only for this terminal layer before
-        `handle_iopub()` set states, so `ZMQTerminalInteractiveShell` states
-        are the past states (t-1), minus the `execution_count` counter which is
-        synchronized before this method call.
-        """
         msg_type = msg['header']['msg_type']
         from_here = self.from_here(msg)
+
+        previous_status = self._execution_state
+
+        if msg_type == 'execute_input':
+            self.execution_count = int(msg['content']['execution_count']) + 1
+
+        if msg_type == 'status':
+            self._execution_state = msg['content']['execution_state']
 
         if (self.include_other_output
                 and not from_here
@@ -229,23 +184,76 @@ class SynchronizedZmqTerminal(ZMQTerminalInteractiveShell):
             self._other_is_running_cell_with_echo = True
         elif (self.include_other_output
               and not from_here
-              and self._execution_state == 'busy'
+              and previous_status == 'busy'
               and msg_type == 'status'
-              and msg['content']['execution_state'] == 'idle'
+              and self._execution_state == 'idle'
               and (self._full_echo or self._other_is_running_cell_with_echo)):
             self._other_is_running_cell_with_echo = False
 
-        if (self.include_other_output
-                and not from_here
-                and self._execution_state == 'busy'
-                and msg_type == 'execute_input'):
-            self._other_is_running_cell = True
-        elif (self.include_other_output
-              and not from_here
-              and self._execution_state == 'busy'
-              and msg_type == 'status'
-              and msg['content']['execution_state'] == 'idle'):
-            self._other_is_running_cell = False
+    def _custom_iopub_msg_renderer(self, msg: dict) -> None:
+        msg_type = msg['header']['msg_type']
+
+        if msg_type == 'stream':
+            self._stream_msg_renderer(msg)
+        elif msg_type == 'execute_result':
+            self._execute_result_msg_renderer(msg)
+        elif msg_type == 'display_data':
+            self._display_data_msg_renderer(msg)
+        elif msg_type == 'execute_input':
+            self._execute_input_msg_renderer(msg)
+        elif msg_type == 'clear_output':
+            self._clear_output_msg_renderer(msg)
+
+    def _stream_msg_renderer(self, msg: dict) -> None:
+        if msg['content']['name'] == 'stdout':
+            if self._pending_clearoutput:
+                print('\r', end='', flush=True)
+                self._pending_clearoutput = False
+            print(msg['content']['text'], end='', flush=True)
+        elif msg['content']['name'] == 'stderr':
+            if self._pending_clearoutput:
+                print('\r', file=sys.stderr, end='', flush=True)
+                self._pending_clearoutput = False
+            print(msg['content']['text'], file=sys.stderr, end='', flush=True)
+
+    def _execute_input_msg_renderer(self, msg: dict) -> None:
+        if not self.from_here(msg):
+            ec = msg['content'].get('execution_count', self.execution_count - 1)
+            print(f'Remote In [{ec}]: {msg["content"]["code"]}\n', flush=True)
+
+    def _execute_result_msg_renderer(self, msg: dict) -> None:
+        if self._pending_clearoutput:
+            print("\r", end="")
+            self._pending_clearoutput = False
+
+        self.execution_count = int(msg["content"]["execution_count"])
+
+        if not self.from_here(msg):
+            sys.stdout.write(self.other_output_prefix)
+
+        format_dict = msg["content"]["data"]
+        self.handle_rich_data(format_dict)
+
+        if 'text/plain' not in format_dict:
+            return
+
+        print(format_dict['text/plain'])
+
+    def _display_data_msg_renderer(self, msg: dict) -> None:
+        data = msg['content']['data']
+        handled = self.handle_rich_data(data)
+        if not handled:
+            if not self.from_here(msg):
+                sys.stdout.write(self.other_output_prefix)
+            # if it was an image, we handled it by now
+            if 'text/plain' in data:
+                print(data['text/plain'])
+
+    def _clear_output_msg_renderer(self, msg: dict) -> None:
+        if msg['content']['wait']:
+            self._pending_clearoutput = True
+        else:
+            print('\r', end='')
 
 
 class SynchronizedTerminalApp(ZMQTerminalIPythonApp):
