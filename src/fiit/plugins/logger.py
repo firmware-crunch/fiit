@@ -21,8 +21,8 @@
 
 from typing import Dict, Any
 
-from fiit.core.logger import FiitLogger
-from fiit.core.plugin import FiitPlugin, FiitPluginContext
+from fiit.logger import FiitLogger
+from fiit.plugin import FiitPlugin, FiitPluginContext
 
 
 class PluginEmulatorLogger(FiitPlugin):

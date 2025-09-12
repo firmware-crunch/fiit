@@ -25,7 +25,7 @@ import mmap
 import ctypes
 from typing import Tuple
 
-from fiit.core.emulator_types import AddressSpace, MemoryRegion
+from fiit.emu.emu_types import AddressSpace, MemoryRegion
 
 import pytest
 

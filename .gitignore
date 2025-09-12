@@ -1,8 +1,8 @@
 .idea
 __pycache__/
 *.egg-info/
+.pytest_cache/
 tests/htmlcov
 tests/.coverage
 tests/lextab.py
 tests/yacctab.py
-

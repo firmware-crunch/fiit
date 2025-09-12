@@ -21,7 +21,7 @@
 
 from typing import Dict, Any
 
-from fiit.core.plugin import FiitPlugin, FiitPluginContext, PluginRequirement
+from fiit.plugin import FiitPlugin, FiitPluginContext, PluginRequirement
 
 
 class CustomDependencyP6:

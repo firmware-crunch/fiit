@@ -19,7 +19,7 @@
 #
 ################################################################################
 
-from fiit.core.plugin import FiitPlugin
+from fiit.plugin import FiitPlugin
 
 
 class PluginTestP4(FiitPlugin):

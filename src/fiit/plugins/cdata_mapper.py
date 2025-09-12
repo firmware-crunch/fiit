@@ -19,95 +19,32 @@
 #
 ################################################################################
 
-from typing import Dict, Any, cast, List
+from typing import Dict, Any, cast
 
-import IPython
-from IPython.core import magic
-from IPython.core.magic_arguments import (
-    argument, magic_arguments, parse_argstring)
-
-from fiit.core.emulator_types import (
-    Architecture, AddressSpace, ADDRESS_FORMAT)
-from fiit.core.ctypes import (
+from fiit.emu.emu_types import Architecture, ADDRESS_FORMAT
+from fiit.arch_ctypes import (
     configure_ctypes, CTypesTranslator,
-    CDataMemMapper, CDataMemMapEntry,
-    CTYPES_TRANSLATOR_FLAVOR)
-from fiit.core.shell import register_alias
-from .shell import Shell
-import fiit.plugins.context_config as ctx_conf
-from fiit.core.plugin import FiitPlugin, FiitPluginContext
+    CDataMemMapper, CTYPES_TRANSLATOR_FLAVOR
+)
+from fiit.plugin import FiitPlugin, FiitPluginContext
+from fiit.shell.front_cdata_mmap import CDataMemMapperFrontend
+
+from . import (
+    CTX_EMULATOR_ADDRESS_SPACE, CTX_EMULATOR_ARCH, CTX_SHELL,
+    CTX_CDATA_MEMORY_MAPPER
+)
 
 
-class ShellCDataMemMapper:
-    def __init__(self, cdata_mem_mapper: CDataMemMapper, address_formatter):
-        self._cdata_mem_mapper = cdata_mem_mapper
-        self._address_formatter = address_formatter
 
-    def __getattr__(self, name: str):
-        if cdata_entry := self._cdata_mem_mapper.get_cdata_mapping(name):
-            return cdata_entry.cdata
-        else:
-            raise AttributeError(f'{name} attribute not found.')
-
-    def __repr__(self):
-        cdata_entries = self._cdata_mem_mapper.get_all_mapping()
-
-        cdata_by_addr: Dict[int, List[CDataMemMapEntry]] = {}
-        for _, cdata_entry in cdata_entries.items():
-            cdata_by_addr.setdefault(cdata_entry.address, list())
-            cdata_by_addr[cdata_entry.address].append(cdata_entry)
-
-        buffer = list()
-        for addr in sorted(cdata_by_addr):
-            for entry in cdata_by_addr[addr]:
-                buffer.append(f'{self._address_formatter(entry.address)} '
-                              f': {entry.name} '
-                              f': {str(entry.cdata.__class__._name_)}')
-
-        return '\n'.join(buffer)
-
-
-@IPython.core.magic.magics_class
-class CDataMemMapperFrontend(IPython.core.magic.Magics):
-    def __init__(
-        self, cdata_mem_mapper: CDataMemMapper, shell: Shell,
-        address_formatter
-    ):
-        super(CDataMemMapperFrontend, self).__init__(shell=shell.shell)
-        self.cdata_memory_mapper = cdata_mem_mapper
-        self.shell = shell
-        shell.register_magics(self)
-        shell.register_aliases(self)
-        shell_cdata_mapper = ShellCDataMemMapper(
-            cdata_mem_mapper, address_formatter)
-        shell.map_object_in_shell('cdata_mapping', shell_cdata_mapper)
-
-    @magic_arguments()
-    @argument('cdata_type', type=str, help='')
-    @argument('cdata_name', type=str, help='')
-    @argument('address', help='')
-    @register_alias('bc')
-    @IPython.core.magic.line_magic
-    def map_cdata(self, line: str):
-        args = parse_argstring(self.map_cdata, line)
-        if isinstance(args.address, str):
-            address = int(args.address, 16)
-        else:
-            address = args.address
-
-        self.cdata_memory_mapper.map_cdata(
-            args.ctype_name, args.cdata_name, address)
-
-
-class PluginCDataMemoryMapper(FiitPlugin):
-    NAME = 'plugin_c_data_memory_mapper'
+class PluginCdataMemoryMapper(FiitPlugin):
+    NAME = 'plugin_cdata_memory_mapper'
     REQUIREMENTS = [
-        ctx_conf.EMULATOR_ADDRESS_SPACE.as_require(),
-        ctx_conf.EMULATOR_ARCH.as_require()]
+        CTX_EMULATOR_ADDRESS_SPACE.as_require(),
+        CTX_EMULATOR_ARCH.as_require()]
     OPTIONAL_REQUIREMENTS = [
-        ctx_conf.SHELL.as_require()]
+        CTX_SHELL.as_require()]
     OBJECTS_PROVIDED = [
-        ctx_conf.CDATA_MEMORY_MAPPER]
+        CTX_CDATA_MEMORY_MAPPER]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -134,7 +71,7 @@ class PluginCDataMemoryMapper(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        arch = cast(Architecture, requirements[ctx_conf.EMULATOR_ARCH.name])
+        arch = cast(Architecture, requirements[CTX_EMULATOR_ARCH.name])
         ctypes_arch = f'{arch.cpu_name}:{arch.endian}:{arch.mem_bit_size}'
         ctypes_options = plugin_config['ctypes_options']
         ctypes_flavor = CTYPES_TRANSLATOR_FLAVOR[plugin_config['ctypes_flavor']]
@@ -147,13 +84,13 @@ class PluginCDataMemoryMapper(FiitPlugin):
             ctt.add_cdata_type(extra_cdata_types)
 
         cdata_mem_mapper = CDataMemMapper(
-            requirements[ctx_conf.EMULATOR_ADDRESS_SPACE.name], ctt.get_ctypes_config())
+            requirements[CTX_EMULATOR_ADDRESS_SPACE.name], ctt.get_ctypes_config())
 
         for cdata_map_file in plugin_config['cdata_mapping_files']:
             cdata_mem_mapper.map_cdata_from_file(cdata_map_file)
 
-        plugins_context.add(ctx_conf.CDATA_MEMORY_MAPPER.name, cdata_mem_mapper)
+        plugins_context.add(CTX_CDATA_MEMORY_MAPPER.name, cdata_mem_mapper)
 
-        if shell := optional_requirements.get(ctx_conf.SHELL.name):
+        if shell := optional_requirements.get(CTX_SHELL.name):
             CDataMemMapperFrontend(
                 cdata_mem_mapper, shell, ADDRESS_FORMAT[arch.mem_bit_size])

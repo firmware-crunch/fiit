@@ -25,9 +25,10 @@ import copy
 from unicorn import Uc
 from unicorn.arm_const import UC_ARM_REG_LR
 
-from fiit.core.cc_base import CallingConvention
-from fiit.core.ctypes import configure_ctypes, CTypesTranslator
-from fiit.core.ctypes.ctypes_base import (
+from fiit.hooking_engine.cc_base import CallingConvention
+from fiit.arch_ctypes.config import configure_ctypes
+from fiit.arch_ctypes.translator import CTypesTranslator
+from fiit.arch_ctypes.base_types import (
     DataPointerBase,
     CBaseType, FundBaseType, IntegralType, FloatType,
     ArgSpec, FunctionSpec, Struct)

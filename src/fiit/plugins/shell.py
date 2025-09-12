@@ -21,9 +21,10 @@
 
 from typing import Optional, Dict, Any, Union
 
-from fiit.core.shell import Shell
-from fiit.core.plugin import FiitPlugin, FiitPluginContext
-import fiit.plugins.context_config as ctx_conf
+from fiit.shell import Shell
+from fiit.plugin import FiitPlugin, FiitPluginContext
+
+from . import CTX_SHELL
 
 
 class ShellPluginsContext:
@@ -35,7 +36,7 @@ class ShellPluginsContext:
 
 class PluginShell(FiitPlugin):
     NAME = 'plugin_shell'
-    OBJECTS_PROVIDED = [ctx_conf.SHELL]
+    OBJECTS_PROVIDED = [CTX_SHELL]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -61,7 +62,7 @@ class PluginShell(FiitPlugin):
         optional_requirements: Dict[str, Any]
     ):
         self.shell = Shell(**plugin_config)
-        plugins_context.add(ctx_conf.SHELL.name, self.shell)
+        plugins_context.add(CTX_SHELL.name, self.shell)
         plugins_context.program_entry = self.plugin_program_entry
         self.context = plugins_context.context
 

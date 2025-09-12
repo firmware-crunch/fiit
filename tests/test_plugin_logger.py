@@ -23,7 +23,7 @@ import pytest
 
 from .fixtures.fixture_utils import temp_named_txt_file
 
-from fiit.core.plugin import PluginManager
+from fiit.plugin import PluginManager
 
 
 @pytest.mark.parametrize(

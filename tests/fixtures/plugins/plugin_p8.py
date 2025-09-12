@@ -21,7 +21,7 @@
 
 from typing import Dict, Any
 
-from fiit.core.plugin import FiitPlugin, FiitPluginContext, ContextObject
+from fiit.plugin import FiitPlugin, FiitPluginContext, ContextObject
 
 
 class CustomObject:

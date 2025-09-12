@@ -26,7 +26,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="fiit-python",
-    version="0.1",
+    version="0.3.0",
     author="Vincent Dary",
     author_email="",
     description="fiit: Firmware Instrumentation and Introspection Tools",
@@ -46,6 +46,7 @@ setuptools.setup(
     python_requires=">=3.9",
     install_requires=[
         'unicorn ==2.0.1',
+        # unicorn dev branch
         #'unicorn @ git+https://github.com/unicorn-engine/unicorn.git@dev#subdirectory=bindings/python',
         'capstone ==4.0.2',
         'pycparser ==2.20',
@@ -69,8 +70,8 @@ setuptools.setup(
     },
     entry_points={
         'console_scripts': [
-            'fiit=fiit.frontend.fiit:main',
-            'fiit_console=fiit.frontend.fiit_console:fiit_console'
+            'fiit=fiit.fiit:main',
+            'fiit_jupyter=fiit.shell.fiit_jupyter:fiit_jupyter'
         ]
     },
     zip_safe=False,

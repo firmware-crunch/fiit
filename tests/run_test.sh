@@ -24,9 +24,7 @@
 # IPY_TEST_SIMPLE_PROMPT=1 Force IPython to use input than readline.
 IPY_TEST_SIMPLE_PROMPT=1 JUPYTER_PLATFORM_DIRS=1 pytest \
   --cov-report html \
-  --cov="fiit.core" \
-  --cov="fiit.unicorn" \
-  --cov="fiit.plugins" \
+  --cov="fiit" \
   -s -v "${@}"
 
 rm -rf .pytest_cache

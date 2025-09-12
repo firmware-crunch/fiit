@@ -21,7 +21,7 @@
 
 from typing import Dict, Any
 
-from fiit.core.plugin import (
+from fiit.plugin import (
     FiitPlugin, FiitPluginContext, PluginRequirement, ObjectRequirement)
 from .plugin_p1 import PluginTestP1
 from .plugin_p2 import PluginTestP2
