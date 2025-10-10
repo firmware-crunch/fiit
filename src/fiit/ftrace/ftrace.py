@@ -32,8 +32,8 @@ from .log_formatter import FtraceLogFormatter
 from .filter import FunctionRuntimeFilter
 
 FUNC_TRACER_EXT_DIR = os.path.abspath(
-    f'{os.path.dirname(os.path.realpath(__file__))}'
-    f'/ext')
+    f'{os.path.dirname(os.path.realpath(__file__))}/ext'
+)
 
 
 FUNC_TRACE_LOG_PYTHON = 1
@@ -41,7 +41,6 @@ FUNC_TRACE_LOG_BIN = 2
 
 
 class Ftrace:
-    LOGGER_NAME = 'fiit.ftrace'
 
     def __init__(
         self,
@@ -73,7 +72,8 @@ class Ftrace:
 
         data: Dict[str, Any] = None
     ):
-        self._log = logging.getLogger(self.LOGGER_NAME)
+        logger_name = f'fiit.ftrace.dev@{hooking_engine.cpu.dev_name}'
+        self._log = logging.getLogger(logger_name)
 
         ########################################################################
         # Hooking engine

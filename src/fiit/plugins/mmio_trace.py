@@ -19,9 +19,18 @@
 #
 ################################################################################
 
+__all__ = [
+    'PluginMmioTracer',
+    'PluginMmioDbg'
+]
+
 import re
 from typing import Dict, List, Set, Any, cast
 
+from fiit.plugin import FiitPlugin, FiitPluginContext
+from fiit.dbg import Debugger
+from fiit.machine import Machine
+from fiit.config_loader import normalize_hex_int64
 from fiit.mmio_trace import MmioTrace, MmioDbg
 from fiit.mmio_trace.filter import (
     CodeAddress, RegisterAddress, RegisterAddressFieldsMap, SvdPeripheralName,
@@ -31,16 +40,13 @@ from fiit.mmio_trace.interceptor import (
     WatchMemoryRangeDict, WatchRegisterDict, WatchSvdPeripheralDict,
     WatchSvdRegisterDict
 )
-from fiit.shell.front_mmio_dbg import MmioDbgFrontend
-from fiit.shell.front_mmio_trace import MmioTraceViz
-from fiit.shell import Shell
-from fiit.config_loader import normalize_hex_int64
-from fiit.plugin import FiitPlugin, FiitPluginContext
 
 from . import (
-    CTX_UNICORN_UC, CTX_SHELL, CTX_MMIO_TRACER, CTX_DBG,
-    CTX_MMIO_DBG,
+    CTX_MACHINE, CTX_REQ_MACHINE, CTX_MMIO_TRACER, CTX_DBG, CTX_REQ_DBG,
+    CTX_MMIO_DBG
 )
+
+# ==============================================================================
 
 
 class MmioFilterConfigParser:
@@ -293,22 +299,25 @@ plugin_mmio_rule_set_registry = (
 )
 
 
-class PluginMmioTrace(FiitPlugin):
-    NAME = 'plugin_mmio_trace'
-    REQUIREMENTS = [CTX_UNICORN_UC.as_require()]
-    OPTIONAL_REQUIREMENTS = [CTX_SHELL.as_require()]
+class PluginMmioTracer(FiitPlugin):
+    NAME = 'plugin_mmio_tracer'
+    REQUIREMENTS = [CTX_REQ_MACHINE]
     OBJECTS_PROVIDED = [CTX_MMIO_TRACER]
     CONFIG_SCHEMA_RULE_SET_REGISTRY = plugin_mmio_rule_set_registry
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
-            'required': False,
-            'schema': {
-                'monitored_memory': 'DEF_MMIO_MONITORED_MEMORIES',
-                'mmio_filters': 'DEF_MMIO_FILTERS',
-                'svd_resource': {'type': 'string', 'default': False},
-                'log': {'type': 'boolean', 'default': False},
-                'log_show_field_states': {'type': 'boolean', 'default': False},
+            'keysrules': {'type': 'string'},
+            'valuesrules': {
+                    'type': 'dict',
+                    'required': False,
+                    'schema': {
+                        'monitored_memory': 'DEF_MMIO_MONITORED_MEMORIES',
+                        'mmio_filters': 'DEF_MMIO_FILTERS',
+                        'svd_resource': {'type': 'string', 'default': False},
+                        'log': {'type': 'boolean', 'default': False},
+                        'log_show_field_states': {'type': 'boolean', 'default': False},
+                    }
             }
         }
     }
@@ -320,35 +329,41 @@ class PluginMmioTrace(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        mmio_tracer = MmioTrace(
-            requirements['unicorn_uc'],
-            monitored_memory=plugin_config['monitored_memory'],
-            mmio_filters=plugin_config['mmio_filters'],
-            svd_resource=plugin_config['svd_resource'],
-            log=plugin_config['log'],
-            log_show_field_states=plugin_config['log_show_field_states'])
+        machine = cast(Machine, requirements[CTX_MACHINE.name])
+        tracers: List[MmioTrace] = []
 
-        if emulator_shell := optional_requirements.get('emulator_shell'):
-            emulator_shell = cast(Shell, emulator_shell)
-            MmioTraceViz(mmio_tracer, emulator_shell)
+        for cpu_name, config in plugin_config.items():
+            cpu = machine.get_device_cpu(cpu_name)
+            mmio_tracer = MmioTrace(
+                cpu,
+                monitored_memory=config['monitored_memory'],
+                mmio_filters=config['mmio_filters'],
+                svd_resource=config['svd_resource'],
+                log=config['log'],
+                log_show_field_states=config['log_show_field_states']
+            )
+            tracers.append(mmio_tracer)
 
-        plugins_context.add(CTX_MMIO_TRACER.name, mmio_tracer)
+        plugins_context.add(CTX_MMIO_TRACER.name, tracers)
 
 
 class PluginMmioDbg(FiitPlugin):
     NAME = 'plugin_mmio_dbg'
-    REQUIREMENTS = [CTX_DBG.as_require()]
-    OPTIONAL_REQUIREMENTS = [CTX_SHELL.as_require()]
+    REQUIREMENTS = [CTX_REQ_DBG]
     OBJECTS_PROVIDED = [CTX_MMIO_DBG]
     CONFIG_SCHEMA_RULE_SET_REGISTRY = plugin_mmio_rule_set_registry
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
-            'required': False,
-            'schema': {
-                'monitored_memory': 'DEF_MMIO_MONITORED_MEMORIES',
-                'mmio_filters': 'DEF_MMIO_FILTERS',
-                'svd_resource': {'type': 'string', 'default': False}
+            'keysrules': {'type': 'string'},
+            'valuesrules': {
+                'type': 'dict',
+                'required': False,
+                'schema': {
+                    'monitored_memory': 'DEF_MMIO_MONITORED_MEMORIES',
+                    'mmio_filters': 'DEF_MMIO_FILTERS',
+                    'svd_resource': {'type': 'string', 'default': False}
+                }
             }
         }
     }
@@ -360,11 +375,21 @@ class PluginMmioDbg(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        mmio_dbg = MmioDbg(requirements[CTX_DBG.name], **plugin_config)
+        dbg_list: List[Debugger] = requirements[CTX_DBG.name]
+        mmio_dbg_list: List[MmioDbg] = []
 
-        if shell := optional_requirements.get(CTX_SHELL.name):
-            shell = cast(Shell, shell)
-            shell.stream_logger_to_shell_stdout(mmio_dbg.LOGGER_NAME)
-            MmioDbgFrontend(mmio_dbg, shell)
+        for cpu_name, config in plugin_config.items():
+            found = False
 
-        plugins_context.add(CTX_MMIO_DBG.name, mmio_dbg)
+            for dbg in dbg_list:
+                if dbg.cpu.dev_name == cpu_name:
+                    mmio_dbg_instance = MmioDbg(dbg, **config)
+                    mmio_dbg_list.append(mmio_dbg_instance)
+                    found = True
+
+            if not found:
+                raise ValueError(
+                    f'debugger instance not found for dev@{cpu_name}'
+                )
+
+        plugins_context.add(CTX_MMIO_DBG.name, mmio_dbg_list)

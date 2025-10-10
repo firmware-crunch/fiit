@@ -119,22 +119,6 @@ def test_plugin_manager_load_plugin_by_config_file_object_dependency_not_found(t
 
 
 @pytest.mark.parametrize(
-    'temp_named_txt_file', [['plugin_test_p6: {activate: true}', '.yaml']],
-    indirect=['temp_named_txt_file'])
-def test_plugin_manager_load_plugin_by_config_file_dependency_optional_invalid_type(temp_named_txt_file):
-
-    class OtherType:
-        pass
-
-    pl = PluginManager()
-    pl.plugins_context.add('plugin_test_optional_requirement', OtherType())
-
-    with pytest.raises(PluginRequirementInvalidType):
-        pl.load_plugin_by_config_file(temp_named_txt_file.name,
-                                      [plugin_fixture_dir])
-
-
-@pytest.mark.parametrize(
     'temp_named_txt_file', [['plugin_test_p7: {activate: true}', '.yaml']],
     indirect=['temp_named_txt_file'])
 def test_plugin_manager_load_plugin_by_config_file_config_schema_rule_set_registry(temp_named_txt_file):

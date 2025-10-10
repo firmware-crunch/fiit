@@ -25,7 +25,7 @@ import copy
 
 import pytest
 
-from .fixtures.fixture_utils import minimal_address_space
+from .fixtures.fixture_utils import minimal_memory, minimal_memory_host
 
 from fiit.arch_ctypes import configure_ctypes
 from fiit.arch_ctypes.base_types import (
@@ -255,34 +255,35 @@ def test_ctypes_data_pointer_fail_de_referencing():
         assert new_ptr.contents
 
 
-def test_ctypes_data_pointer_host_mapped_de_referencing(minimal_address_space):
-    address_space, mem_base, mem_size, mapping = minimal_address_space
+def test_ctypes_data_pointer_host_mapped_de_referencing(minimal_memory_host):
+    mem = minimal_memory_host
+    mem_region = mem.regions[0]
     raw_value_1 = b'\x04\x03\x02\x01'
     raw_value_offset_1 = 0x50
     raw_value_2 = b'\x08\x07\x06\x05'
     raw_value_offset_2 = 0x58
 
-    mapping.seek(raw_value_offset_1)
-    mapping.write(raw_value_1)
-    mapping.seek(raw_value_offset_2)
-    mapping.write(raw_value_2)
+    mem_region.host_mem.seek(raw_value_offset_1)
+    mem_region.host_mem.write(raw_value_1)
+    mem_region.host_mem.seek(raw_value_offset_2)
+    mem_region.host_mem.write(raw_value_2)
 
     configure_ctypes('arm:el:32', [globals()])
     int_var = UnsignedInt.from_address(
-        address_space.memory_regions[0].host_base_address+raw_value_offset_1)
-    int_var_ptr = DataPointerBase.new(int_var, mem_base+raw_value_offset_1,
-                                      address_space)
+        mem_region.host_base_address+raw_value_offset_1)
+    int_var_ptr = DataPointerBase.new(
+        int_var, mem_region.base_address + raw_value_offset_1, mem)
 
     assert int_var.value == 0x01020304
     assert int_var_ptr.contents.value == 0x01020304
     assert not int_var_ptr.is_null()
 
-    int_var_ptr.target_address = mem_base + raw_value_offset_2
+    int_var_ptr.target_address = mem_region.base_address + raw_value_offset_2
 
     assert int_var_ptr.contents.value == 0x05060708
     assert not int_var_ptr.is_null()
 
-    int_var_ptr.target_address = mem_base + mem_size * 2
+    int_var_ptr.target_address = mem_region.base_address + mem_region.size * 2
 
     with pytest.raises(ValueError):
         assert int_var_ptr.contents.value

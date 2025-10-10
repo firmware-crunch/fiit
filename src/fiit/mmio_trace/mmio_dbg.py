@@ -23,17 +23,14 @@ from typing import Dict
 
 from cmsis_svd.model import SVDRegister
 
-from ..emu import ArchUnicorn
-from ..dbg import Debugger, DBG_EVENT_WATCHPOINT
+from fiit.dbg import Debugger, DBG_EVENT_WATCHPOINT
 
 from .svd_helper import SvdLoader, SvdIndex
 from .interceptor import MmioInterceptor, MonitoredMemory
 from .logger import MmioLogger
 
 
-
 class MmioDbg:
-    LOGGER_NAME = 'fiit.mmio_dbg'
 
     def __init__(
         self,
@@ -47,15 +44,16 @@ class MmioDbg:
         svd_dev = SvdLoader().load(svd_resource) if svd_resource else None
         svd_index = SvdIndex(svd_dev) if svd_dev else None
 
-        self.mem_bit_size = ArchUnicorn.get_mem_bit_size_by_uc(self._dbg.uc)
+        self.mem_bit_size = dbg.cpu.bits.value
         self._monitored_memory = MonitoredMemory(
             self.mem_bit_size, **monitored_memory, svd_index=svd_index)
 
+        logger_name = f'fiit.mmio_dbg.dev@{dbg.cpu.dev_name}'
         self.mmio_logger = MmioLogger(
-            self.mem_bit_size, self._monitored_memory, self.LOGGER_NAME, True)
+            self.mem_bit_size, self._monitored_memory, logger_name, True)
 
         self.mmio_interceptor = MmioInterceptor(
-            self._dbg.uc,
+            dbg.cpu,
             self._monitored_memory,
             [self._read_callback],
             [self._write_callback],

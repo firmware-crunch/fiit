@@ -19,5 +19,20 @@
 #
 ################################################################################
 
-from .shell import Shell, register_alias
-from .fiit_jupyter import fiit_jupyter, fiit_jupyter_from_backend
+__all__ = (
+    'Shell',
+    'register_alias',
+    'fiit_jupyter',
+    'fiit_jupyter_from_backend'
+)
+
+from .shell import (
+    Shell,
+    register_alias
+)
+
+from .fiit_jupyter import (
+    fiit_jupyter,
+    fiit_jupyter_from_backend
+)
+

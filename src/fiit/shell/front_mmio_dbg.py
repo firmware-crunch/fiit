@@ -19,32 +19,50 @@
 #
 ################################################################################
 
+__all__ = [
+    'MmioDbgFrontend'
+]
+
+from typing import List, Union
+
 import IPython
 from IPython.core import magic
 from IPython.core.magic_arguments import (
     argument, magic_arguments, parse_argstring
 )
 
-from ..shell import Shell
-from ..mmio_trace import MmioDbg
+from fiit.mmio_trace import MmioDbg
+from .shell import Shell
 
+# ==============================================================================
 
 
 @IPython.core.magic.magics_class
 class MmioDbgFrontend(IPython.core.magic.Magics):
-    def __init__(self, mmio_dbg: MmioDbg, shell: Shell):
-        self._mmio_dbg = mmio_dbg
+    def __init__(self, mmio_dbg_list: List[MmioDbg], shell: Shell):
+        self._mmio_dbg_list = mmio_dbg_list
         super(MmioDbgFrontend, self).__init__(shell=shell.shell)
         self._shell = shell
         self._shell.register_magics(self)
         self._shell.register_aliases(self)
 
+    def _get_mmio_dbg(self, cpu_name: str) -> Union[MmioDbg, None]:
+        for mmio_dbg in self._mmio_dbg_list:
+            if mmio_dbg._dbg.cpu.name == cpu_name:
+                return mmio_dbg
+
     @magic_arguments()
+    @argument('cpu_name', type=str, help='')
     @argument('--exclude-from-address', nargs='*', default=[],
               help='Exclude MMIO access interception from this code location.')
     @IPython.core.magic.line_magic
     def mmio_dbg_filter(self, line: str):
         kwargs = parse_argstring(self.mmio_dbg_filter, line)
-        self._mmio_dbg.mmio_interceptor.filter.exclude_from_address_add(
-            [int(a, 16) for a in kwargs.exclude_from_address])
-        self._mmio_dbg.mmio_interceptor.filter.build_filters()
+        mmio_dbg = self._get_mmio_dbg(kwargs.dev_name)
+
+        if mmio_dbg is None:
+            print(f'mmio debugger not found for CPU device "{kwargs.dev_name}"')
+        else:
+            exclude = [int(a, 16) for a in kwargs.exclude_from_address]
+            mmio_dbg.mmio_interceptor.filter.exclude_from_address_add(exclude)
+            mmio_dbg.mmio_interceptor.filter.build_filters()

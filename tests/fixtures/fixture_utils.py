@@ -19,15 +19,34 @@
 #
 ################################################################################
 
+__all__ = [
+    'get_file_content',
+    'temp_named_txt_file',
+    'MinimalMemory',
+    'minimal_memory',
+    'minimal_memory_host'
+]
+
 import os
 import tempfile
 import mmap
 import ctypes
-from typing import Tuple
-
-from fiit.emu.emu_types import AddressSpace, MemoryRegion
+from typing import (
+    List,
+    Optional
+)
 
 import pytest
+
+from fiit.machine import (
+    MemoryRegion,
+    Memory,
+    MemoryProtection,
+    CpuBits,
+    CpuEndian
+)
+
+# ------------------------------------------------------------------------------
 
 
 def get_file_content(fixture_filename: str):
@@ -46,15 +65,76 @@ def temp_named_txt_file(request):
 
 
 @pytest.fixture
-def minimal_address_space() -> Tuple[AddressSpace, int, int, mmap.mmap]:
-    mem_base = 0x2000
-    mem_size = 4096
-    host_mem_area = mmap.mmap(
-        -1, 4096, flags=mmap.MAP_PRIVATE,
-        prot=mmap.PROT_READ | mmap.PROT_WRITE | mmap.PROT_EXEC)
-    host_base_address = ctypes.addressof(
-        ctypes.c_ubyte.from_buffer(host_mem_area))
-    mr = MemoryRegion(
-        'mem0', mem_base, mem_size, 'rwx', host_base_address, host_mem_area)
-    address_space = AddressSpace([mr])
-    return address_space, mem_base, mem_size, host_mem_area
+def temp_named_bin_file(request):
+    with tempfile.NamedTemporaryFile(mode='wb', suffix=request.param[1]) as temp:
+        temp.write(request.param[0])
+        temp.flush()
+        yield temp
+
+
+class MinimalMemory(Memory):
+    def __init__(
+        self,
+        bits: CpuBits = CpuBits.BITS_32,
+        endian: CpuEndian = CpuEndian.EL,
+        name: Optional[str] = None,
+        expose_mem: bool = False
+    ):
+        self.mem_base = 0x2000
+        self.mem_size = 10 * 4096
+
+        self.host_mem = mmap.mmap(
+            -1, self.mem_size, flags=mmap.MAP_PRIVATE,
+            prot=mmap.PROT_READ | mmap.PROT_WRITE | mmap.PROT_EXEC)
+        self.host_base_address = ctypes.addressof(
+            ctypes.c_ubyte.from_buffer(self.host_mem))
+
+        mem_region_kwargs = {
+            'base_address': self.mem_base,
+            'size': self.mem_size,
+        }
+        if expose_mem:
+            mem_region_kwargs.update({
+                'host_mem': self.host_mem,
+                'host_base_address': self.host_base_address
+            })
+
+        self._regions = [MemoryRegion(**mem_region_kwargs)]
+        Memory.__init__(self, bits, endian, name)
+
+    @property
+    def regions(self) -> List[MemoryRegion]:
+        return self._regions
+
+    def write(self, address: int, data: bytes) -> int:
+        self.host_mem.seek(address - self.mem_base)
+        count = self.host_mem.write(data)
+        self.host_mem.flush(0, self.mem_size)
+        self.host_mem.seek(0)
+        return count
+
+    def read(self, address: int, count: int) -> bytes:
+        self.host_mem.seek(address - self.mem_base)
+        content = self.host_mem.read(count)
+        self.host_mem.seek(0)
+        return content
+
+    def create_region(self, base_address: int, size: int,
+                      protection: MemoryProtection = MemoryProtection.ALL,
+                      name: Optional[str] = None,
+                      memory_type: Optional[str] = None) -> MemoryRegion:
+        raise NotImplementedError()
+
+    def remove_region(self, base_address: int, size: int) -> None:
+        raise NotImplementedError()
+
+
+@pytest.fixture
+def minimal_memory() -> MinimalMemory:
+    return MinimalMemory()
+
+
+@pytest.fixture
+def minimal_memory_host() -> MinimalMemory:
+    return MinimalMemory(expose_mem=True)
+

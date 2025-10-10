@@ -19,12 +19,29 @@
 #
 ################################################################################
 
-from typing import Optional, Dict, Any, Union
+__all__ = [
+    'PluginShell'
+]
+
+from typing import Optional, Dict, Any, Union, cast, List
 
 from fiit.shell import Shell
+from fiit.shell.front_machine import MachineFrontend
+from fiit.shell.front_dbg import DbgFrontend
+from fiit.shell.front_cdata_mmap import CDataMemMapperFrontend
+from fiit.shell.front_mmio_dbg import MmioDbgFrontend
+from fiit.shell.front_mmio_trace import MmioTraceVizFrontend
+from fiit.dbg import Debugger
+from fiit.arch_ctypes.cdata_mmap import CDataMemMapper
+from fiit.mmio_trace import MmioTrace, MmioDbg
 from fiit.plugin import FiitPlugin, FiitPluginContext
 
-from . import CTX_SHELL
+from . import (
+    CTX_SHELL, CTX_REQ_MACHINE, CTX_REQ_DBG, CTX_REQ_CDATA_MMAP,
+    CTX_REQ_MMIO_DBG, CTX_REQ_MMIO_TRACER
+)
+
+# ==============================================================================
 
 
 class ShellPluginsContext:
@@ -36,21 +53,31 @@ class ShellPluginsContext:
 
 class PluginShell(FiitPlugin):
     NAME = 'plugin_shell'
+    OPTIONAL_REQUIREMENTS = [
+        CTX_REQ_MACHINE,
+        CTX_REQ_DBG,
+        CTX_REQ_CDATA_MMAP,
+        CTX_REQ_MMIO_TRACER,
+        CTX_REQ_MMIO_DBG,
+    ]
     OBJECTS_PROVIDED = [CTX_SHELL]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
             'required': False,
             'schema': {
-                'remote_ipykernel': {'type': 'boolean', 'default': False,
-                                     'required': False},
-                'allow_remote_connection': {'type': 'boolean', 'default': False,
-                                            'required': False}
+                'remote_ipykernel': {
+                    'type': 'boolean', 'default': False, 'required': False
+                },
+                'allow_remote_connection': {
+                    'type': 'boolean', 'default': False, 'required': False
+                }
             }
         }
     }
 
     def __init__(self):
+        FiitPlugin.__init__(self)
         self.shell: Optional[Shell] = None
         self.context: Union[Dict[str, Any], None] = None
 
@@ -62,6 +89,39 @@ class PluginShell(FiitPlugin):
         optional_requirements: Dict[str, Any]
     ):
         self.shell = Shell(**plugin_config)
+
+        machine = optional_requirements.get(CTX_REQ_MACHINE.name, None)
+        if machine is not None:
+            MachineFrontend(machine, self.shell)
+
+        dbg_list = optional_requirements.get(CTX_REQ_DBG.name, None)
+
+        if dbg_list is not None:
+            dbg_list = cast(List[Debugger], dbg_list)
+            DbgFrontend(dbg_list, self.shell)
+
+        cdata_mmap_list = optional_requirements.get(CTX_REQ_CDATA_MMAP.name, None)
+
+        if cdata_mmap_list is not None:
+            cdata_mmap_list = cast(List[CDataMemMapper], cdata_mmap_list)
+            CDataMemMapperFrontend(cdata_mmap_list, self.shell)
+
+        mmio_tracer_list = optional_requirements.get(CTX_REQ_MMIO_TRACER.name, None)
+
+        if mmio_tracer_list is not None:
+            mmio_tracer_list = cast(List[MmioTrace], mmio_tracer_list)
+            MmioTraceVizFrontend(mmio_tracer_list, self.shell)
+
+        mmio_dbg_list = optional_requirements.get(CTX_REQ_MMIO_DBG.name, None)
+
+        if mmio_dbg_list is not None:
+            mmio_dbg_list = cast(List[MmioDbg], mmio_dbg_list)
+
+            for mmio_dbg in mmio_dbg_list:
+                self.shell.stream_logger_to_shell_stdout(mmio_dbg.LOGGER_NAME)
+
+            MmioDbgFrontend(mmio_dbg_list, self.shell)
+
         plugins_context.add(CTX_SHELL.name, self.shell)
         plugins_context.program_entry = self.plugin_program_entry
         self.context = plugins_context.context

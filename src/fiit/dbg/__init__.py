@@ -19,8 +19,55 @@
 #
 ################################################################################
 
-from .debugger import (
-    Debugger, Breakpoint, Watchpoint,
-    DBG_EVENT_SEGFAULT, DBG_EVENT_BREAKPOINT, DBG_EVENT_WATCHPOINT,
-    DBG_EVENT_STEP
+__all__ = [
+    'Breakpoint',
+    'Watchpoint',
+    'DBG_EVENT_SEGFAULT',
+    'DBG_EVENT_BREAKPOINT',
+    'DBG_EVENT_WATCHPOINT',
+    'DBG_EVENT_STEP',
+    'DebugEventCallback',
+    'Debugger',
+    'DebuggerUnicorn',
+    'DebuggerFactory'
+]
+
+from typing import (
+    Optional,
+    List,
+    Type
 )
+
+from ..machine import DeviceCpu
+
+from .dbg import (
+    Breakpoint,
+    Watchpoint,
+    DBG_EVENT_SEGFAULT,
+    DBG_EVENT_BREAKPOINT,
+    DBG_EVENT_WATCHPOINT,
+    DBG_EVENT_STEP,
+    DebugEventCallback,
+    Debugger
+)
+
+from .uc import DebuggerUnicorn
+
+# ==============================================================================
+
+
+class DebuggerFactory:
+
+    _DEBUGGERS: List[Type[Debugger]] = [
+        DebuggerUnicorn  # Add debugger backend here ...
+    ]
+
+    @classmethod
+    def get(
+        cls, cpu: DeviceCpu, event_callback: Optional[DebugEventCallback] = None
+    ) -> Debugger:
+        for backend_class in cls._DEBUGGERS:
+            if isinstance(cpu.cpu, backend_class.CPU_CLASS):
+                return backend_class(cpu, event_callback)
+
+        raise ValueError(f'Debugger backend not found for cpu "{cpu}"')

@@ -30,9 +30,11 @@ RULE_SET_REGISTRY = (
         'type': ['string', 'integer'], 'check_with': 'hex_int64',
         'coerce': 'hex_int64', 'required': False}),
     ('DEF_SIZE', {'type': ['string', 'integer'], 'coerce': 'hex_int'}),
+    ('DEF_SIZE_OPTIONAL', {
+        'type': ['string', 'integer'], 'coerce': 'hex_int', 'required': False}),
     ('DEF_MEM_PERM', {'type': 'string', 'check_with': 'mem_perm'}),
 
-    ('DEF_MEMORY_MAPPING', {
+    ('DEF_MEMORY_REGIONS', {
         'type': 'list',
         'require_all': True,
         'schema': {
@@ -46,15 +48,14 @@ RULE_SET_REGISTRY = (
         }
     }),
 
-    ('DEF_MEMORY_MAPPED_FILES', {
+    ('DEF_LOAD_FILES', {
         'type': 'list',
         'schema': {
             'type': 'dict',
-            'require_all': True,
             'schema': {
-                'file_path': {'type': 'string'},
+                'filename': {'type': 'string', 'required': True},
                 'file_offset': 'DEF_SIZE',
-                'loading_size': 'DEF_SIZE',
+                'loading_size': 'DEF_SIZE_OPTIONAL',
                 'loading_address': 'DEF_INT64'
             }
         }

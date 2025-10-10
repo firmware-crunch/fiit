@@ -19,16 +19,23 @@
 #
 ################################################################################
 
+__all__ = [
+    'ConfigLoaderError',
+    'ConfigLoader'
+]
+
 import json
 import yaml
 import os
 import struct
-from typing import Union
+from typing import Union, Dict, Any
 
 import cerberus
 
-from .emu.emu_types import MemoryRange
+from .machine import MemoryRange
 from .config_schema import RULE_SET_REGISTRY
+
+# ==============================================================================
 
 
 def normalize_hex_int(value: Union[str, int]) -> int:
@@ -108,6 +115,23 @@ class ConfigLoader:
         self.validator = ConfigValidator()
         self.validator.rules_set_registry.extend(RULE_SET_REGISTRY)
 
+    def parse_config(
+        self, config: Dict[str, Any], schema: dict
+    ) -> Union[dict, list]:
+        schema_r = {'root': schema}
+        config_r = {'root': config}
+        is_valid = self.validator.validate(config_r, schema_r, normalize=False)
+
+        if is_valid:
+            self.config = self.validator.normalized(config_r, schema_r)['root']
+        else:
+            self.config = {}
+            raise ConfigLoaderError(
+                f'Config load error: {self.validator.errors}'
+            )
+
+        return self.config
+
     def load_config(
         self, config_file_path: str, schema: dict
     ) -> Union[dict, list]:
@@ -120,15 +144,5 @@ class ConfigLoader:
             else:
                 raise ConfigLoaderError('Invalid configuration file extension.')
 
-        schema_r = {'root': schema}
-        config_r = {'root': config}
-        is_valid = self.validator.validate(config_r, schema_r, normalize=False)
-
-        if is_valid:
-            self.config = self.validator.normalized(config_r, schema_r)['root']
-        else:
-            self.config = {}
-            raise ConfigLoaderError(f'Config load error: '
-                                    f'{self.validator.errors}')
-
-        return self.config
+        parsed_config = self.parse_config(config, schema)
+        return parsed_config

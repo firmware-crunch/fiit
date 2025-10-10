@@ -19,9 +19,12 @@
 #
 ################################################################################
 
-from typing import List, Literal, Optional, Tuple
+__all__ = [
+    'DbgFrontend'
+]
+
 import sys
-import struct
+from typing import Optional, Tuple, List
 
 import tabulate
 
@@ -31,22 +34,53 @@ from IPython.core.magic_arguments import (
     argument, magic_arguments, parse_argstring
 )
 
-from ..emu.emu_types import ADDRESS_FORMAT
-from ..dbg import (
-    Debugger, Breakpoint, Watchpoint, DBG_EVENT_STEP, DBG_EVENT_WATCHPOINT,
-    DBG_EVENT_BREAKPOINT)
-from ..shell import Shell, register_alias
+from fiit.dbg import (
+    Debugger, DBG_EVENT_STEP, DBG_EVENT_WATCHPOINT, DBG_EVENT_BREAKPOINT
+)
+
+from .shell import Shell, register_alias
+
+# ==============================================================================
 
 
-class DbgFormatter:
-    ADDR_FORMAT_NO_PRE = {
-        8: '{:02x}'.format, 16: '{:04x}'.format, 32: '{:08x}'.format,
-        64: '{:016x}'.format}
+@IPython.core.magic.magics_class
+class DbgFrontend(IPython.core.magic.Magics):
+    def __init__(self, dbg_list: List[Debugger], shell: Shell):
+        self.dbg_list = dbg_list
 
-    def __init__(self, mem_bit_size: Literal[8, 16, 32, 64]):
-        self._mem_bit_size = mem_bit_size
-        self._addr_f = ADDRESS_FORMAT[mem_bit_size]
-        self._addr_f_no_pre = self.ADDR_FORMAT_NO_PRE[mem_bit_size]
+        if len(self.dbg_list) == 0:
+            raise RuntimeError('Debugger instance not found')
+
+        self.dbg: Debugger = self.dbg_list[0]
+
+        for dbg in self.dbg_list:
+            dbg.add_event_callback(self.debug_event_callback)
+
+        self._current_event: Optional[Tuple[int, dict]] = None
+
+        super(DbgFrontend, self).__init__(shell=shell.shell)
+
+        self._shell = shell
+        shell.register_magics(self)
+        shell.register_aliases(self)
+
+        for dbg in self.dbg_list:
+            shell.stream_logger_to_shell_stdout(dbg.logger_name)
+
+    _DBG_BREAK_EVENT = [
+        DBG_EVENT_BREAKPOINT,
+        DBG_EVENT_WATCHPOINT,
+        DBG_EVENT_STEP
+    ]
+
+    def debug_event_callback(
+        self, _: Debugger, event: int, args: dict
+    ):
+        if event in self._DBG_BREAK_EVENT:
+            self._current_event = (event, args)
+            self._shell.resume()
+            self._shell.wait_for_prompt_suspend()
+            self._current_event = None
 
     def hexdump(self, src: bytes, start_addr: int = 0, length: int = 16,
                 sep: str = '.') -> str:
@@ -63,71 +97,29 @@ class DbgFormatter:
             printable = ''.join(['{}'.format(
                 (x <= 127 and chr_filter[x]) or sep) for x in chars])
             lines.append('{0:}  {1:{2}s} |{3:{4}s}|'.format(
-                self._addr_f_no_pre(c + start_addr),
+                self.dbg.mem.addr_to_str(c + start_addr, x_prefix=False),
                 hex_, length * 3, printable, length))
 
         return '\n'.join(lines)
 
-    def breakpoints(self, breakpoints: List[Breakpoint]) -> str:
-        headers = ['index', 'address', 'hit']
-        table = [[idx+1, self._addr_f(b.address), b.hit_count]
-                 for idx, b in enumerate(breakpoints)]
-        return tabulate.tabulate(table, headers, tablefmt="simple")
+    @register_alias('cs')
+    @IPython.core.magic.line_magic
+    def cpu_switch(self, line: str):
+        """Switch debugger"""
+        for dbg in self.dbg_list:
+            if dbg.cpu.dev_name == line:
+                self.dbg = dbg
+                pc_str = dbg.mem.addr_to_str(dbg.cpu.regs.arch_pc)
+                print(f'debugger switch to CPU {dbg.cpu.dev_name}\n'
+                      f'current pc at {pc_str}\n')
+                return
 
-    def watchpoints(self, watchpoints: List[Watchpoint]):
-        headers = ['index', 'begin', 'end', 'access', 'hit']
-        table = [[idx+1, self._addr_f(w.begin), self._addr_f(w.end), w.access,
-                  w.hit_count]
-                 for idx, w in enumerate(watchpoints)]
-        return tabulate.tabulate(table, headers, tablefmt="simple")
-
-    def registers(self, registers: dict) -> str:
-        out = []
-        for idx, r in enumerate(registers):
-            if idx % 3 == 0 and idx != 0:
-                out.append('\n')
-            out.append('{: <5}{}   '.format(r, self._addr_f(registers[r])))
-        return ''.join(out)
-
-
-@IPython.core.magic.magics_class
-class DbgFrontend(IPython.core.magic.Magics):
-    def __init__(self, dbg: Debugger, shell: Shell):
-        #####################################
-        # Debugger Callbacks Settings
-        #####################################
-        self.dbg = dbg
-        dbg.debug_event_callbacks.append(self.debug_event_callback)
-        self._current_event: Optional[Tuple[int, dict]] = None
-
-        #####################################
-        # Shell Init
-        #####################################
-        super(DbgFrontend, self).__init__(shell=shell.shell)
-        self._shell = shell
-        shell.register_magics(self)
-        shell.register_aliases(self)
-        shell.stream_logger_to_shell_stdout(self.dbg.LOGGER_NAME)
-
-        #####################################
-        # Output Formatters
-        #####################################
-        self._formatter = DbgFormatter(dbg.mem_bit_size)
-
-    def debug_event_callback(
-        self, _: Debugger, event: int, args: dict
-    ):
-        if event in [DBG_EVENT_BREAKPOINT, DBG_EVENT_WATCHPOINT,
-                     DBG_EVENT_STEP]:
-            self._current_event = (event, args)
-            self._shell.resume()
-            self._shell.wait_for_prompt_suspend()
-            self._current_event = None
+        raise ValueError(f'debugger instance not found for cpu "{line}"')
 
     @register_alias('c')
     @IPython.core.magic.line_magic
     def cont(self, _: str):
-        """Continue emulation."""
+        """Continue emulation"""
         if self._current_event is not None:
             self._shell.suspend()
         else:
@@ -136,7 +128,7 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('s')
     @IPython.core.magic.line_magic
     def step(self, _: str):
-        """Steps to the next instruction."""
+        """Steps to the next instruction"""
         if self._current_event is not None:
             self.dbg.set_step()
             self._shell.suspend()
@@ -149,10 +141,28 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('rg')
     @IPython.core.magic.line_magic
     def register_get(self, line: str):
-        """Get CPU register(s)."""
+        """Get CPU register(s)"""
         args = parse_argstring(self.register_get, line)
-        regs = self.dbg.get_cpu_registers(args.registers)
-        sys.stdout.write(self._formatter.registers(regs))
+
+        include_filter = None
+        if len(args.registers) > 0:
+            include_filter = args.registers
+
+        filtered_regs = self.dbg.regs.save(include_filter)
+
+        indent = max([len(r) for r in filtered_regs])
+        fmt = f'{{: <{indent + 2}}}{{}}   '.format
+
+        out = []
+        for idx, reg in enumerate(args.registers):
+            if idx % 3 == 0 and idx != 0:
+                out.append('\n')
+            reg_value = filtered_regs[reg]
+            reg_value_str = self.dbg.mem.addr_to_str(reg_value)
+            out.append(fmt(reg, reg_value_str))
+
+        out = ''.join(out)
+        sys.stdout.write(out)
 
     @magic_arguments()
     @argument('register', help='CPU Register name to set.')
@@ -160,9 +170,9 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('rs')
     @IPython.core.magic.line_magic
     def register_set(self, line: str):
-        """Set CPU register."""
+        """Set CPU register"""
         args = parse_argstring(self.register_set, line)
-        self.dbg.set_cpu_register(args.register, int(args.value, 16))
+        self.dbg.regs.write(args.register, int(args.value, 16))
 
     @magic_arguments()
     @argument('address', help='Starting memory address to disassemble.')
@@ -171,7 +181,7 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('dis')
     @IPython.core.magic.line_magic
     def disassemble(self, line: str):
-        """Disassemble memory."""
+        """Disassemble memory"""
         args = parse_argstring(self.disassemble, line)
         addr = int(args.address, 16)
         insns = self.dbg.disassemble(addr, args.count)
@@ -184,12 +194,10 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('mr')
     @IPython.core.magic.line_magic
     def mem_read(self, line: str):
-        """Read Memory."""
+        """Read Memory"""
         args = parse_argstring(self.mem_read, line)
         addr = int(args.address, 16)
-        sys.stdout.write(
-            self._formatter.hexdump(
-                self.dbg.uc.mem_read(addr, args.size), addr))
+        sys.stdout.write(self.hexdump(self.dbg.mem.read(addr, args.size), addr))
 
     @magic_arguments()
     @argument('address', help='Starting memory address to write.')
@@ -198,16 +206,13 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('mw')
     @IPython.core.magic.line_magic
     def mem_write(self, line: str):
-        """Write Memory."""
+        """Write Memory"""
         args = parse_argstring(self.mem_write, line)
         addr = int(args.address, 16)
         if args.type == 'word':
-            value = int(args.value, 16)
-            endian = '>' if self.dbg.endiannes == 'big' else '<'
-            self.dbg.uc.mem_write(
-                addr, struct.pack(f'{endian}I', value))
+            self.dbg.mem.write_word(addr, int(args.value, 16))
         if args.type == 'cstring':
-            self.dbg.uc.mem_write(addr, args.value.encode())
+            self.dbg.mem.write_cstring(addr, args.value)
 
     @magic_arguments()
     @argument('address', help='Address where to pause the execution.')
@@ -217,7 +222,7 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('bps')
     @IPython.core.magic.line_magic
     def breakpoint_set(self, line: str):
-        """Set breakpoint."""
+        """Set breakpoint"""
         args = parse_argstring(self.breakpoint_set, line)
         self.dbg.breakpoint_set(int(args.address, 16), int(args.count))
 
@@ -233,8 +238,12 @@ class DbgFrontend(IPython.core.magic.Magics):
     @IPython.core.magic.line_magic
     @register_alias('bpp')
     def breakpoint_print(self, _: str):
-        """Print breakpoint."""
-        print(self._formatter.breakpoints(list(self.dbg._breakpoints.values())))
+        """Print breakpoint"""
+        headers = ['index', 'address', 'hit']
+        table = [[idx+1, self.dbg.mem.addr_to_str(b.address), b.hit_count]
+                 for idx, b in enumerate(self.dbg.breakpoint_get())]
+        out = tabulate.tabulate(table, headers, tablefmt="simple")
+        print(out)
 
     @magic_arguments()
     @argument('access', choices=['r', 'w', 'rw'], help='Access type to monitor')
@@ -247,7 +256,7 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('wpa')
     @IPython.core.magic.line_magic
     def watchpoint_area(self, line: str):
-        """Set watchpoint on memory area access."""
+        """Set watchpoint on memory area access"""
         args = parse_argstring(self.watchpoint_area, line)
         begin, end = int(args.begin, 16), int(args.end, 16)
         count = int(args.count)
@@ -262,7 +271,7 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('wpv')
     @IPython.core.magic.line_magic
     def watchpoint_var(self, line: str):
-        """Set watchpoint on variable access."""
+        """Set watchpoint on variable access"""
         args = parse_argstring(self.watchpoint_var, line)
         address = int(args.address, 16)
         count = int(args.count)
@@ -273,12 +282,17 @@ class DbgFrontend(IPython.core.magic.Magics):
     @register_alias('wpd')
     @IPython.core.magic.line_magic
     def watchpoint_del(self, line: str):
-        """Delete watchpoint."""
+        """Delete watchpoint"""
         args = parse_argstring(self.watchpoint_del, line)
         self.dbg.watchpoint_del_by_index(args.index)
 
     @register_alias('wpp')
     @IPython.core.magic.line_magic
     def watchpoint_print(self, _: str):
-        """Print watchpoint."""
-        print(self._formatter.watchpoints(list(self.dbg._watchpoints.values())))
+        """Print watchpoint"""
+        headers = ['index', 'begin', 'end', 'access', 'hit']
+        table = [[idx+1, self.dbg.mem.addr_to_str(w.begin),
+                  self.dbg.mem.addr_to_str(w.end), w.access, w.hit_count]
+                 for idx, w in enumerate(self.dbg.watchpoint_get())]
+        out = tabulate.tabulate(table, headers, tablefmt="simple")
+        print(out)

@@ -19,9 +19,11 @@
 #
 ################################################################################
 
-from typing import Optional, List, Dict, Union, Callable
+from abc import ABC, abstractmethod
+from typing import Optional, List, Dict, Union, Callable, ClassVar
 
-from ..arch_ctypes.base_types import CBaseType, FunctionSpec
+from fiit.machine import DeviceCpu, Memory, CpuRegisters
+from fiit.arch_ctypes.base_types import CBaseType, FunctionSpec
 
 
 class CpuContext:
@@ -64,31 +66,48 @@ class ReturnValue:
         self._writer(self.func_spec, self.value)
 
 
-class CallingConvention:
-    NAME: str
+class CallingConvention(ABC):
+    NAME: ClassVar[str]
 
+    mem: Memory
+    regs: CpuRegisters
+
+    @abstractmethod
+    def __init__(self, cpu: DeviceCpu, *args, **kwargs):
+        pass
+
+    @abstractmethod
     def set_pc(self, address: int):
-        raise NotImplementedError('Program counter setter not implemented')
+        pass
 
+    @abstractmethod
     def get_return_address(self) -> int:
-        raise NotImplementedError('Return address retrieving not implemented')
+        pass
 
+    @abstractmethod
     def get_cpu_context(self) -> CpuContext:
-        raise NotImplementedError('Cpu context retrieving not implemented')
+        pass
 
+    @abstractmethod
     def get_arguments(self, spec: FunctionSpec) -> List[FuncArg]:
-        raise NotImplementedError('Argument retrieving not implemented')
+        pass
 
-    def set_arguments(self, spec: FunctionSpec,
-                      arg_values: Dict[int, CBaseType]):
-        raise NotImplementedError('Argument setting not implemented')
+    @abstractmethod
+    def set_arguments(
+        self, spec: FunctionSpec, arg_values: Dict[int, CBaseType]
+    ) -> None:
+        pass
 
+    @abstractmethod
     def get_return_value(self, spec: FunctionSpec) -> Union[ReturnValue, None]:
-        raise NotImplementedError('Return value getter not implemented')
+        pass
 
+    @abstractmethod
     def set_return_value(self, spec: FunctionSpec, value: CBaseType):
-        raise NotImplementedError('Return value setter not implemented')
+        pass
 
-    def call(self, spec: FunctionSpec, arg_values: Dict[int, CBaseType]) \
-            -> Union[CBaseType, None]:
-        raise NotImplementedError('Function call not implemented')
+    @abstractmethod
+    def call(
+        self, spec: FunctionSpec, arg_values: Dict[int, CBaseType]
+    ) -> Union[CBaseType, None]:
+        pass

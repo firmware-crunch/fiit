@@ -19,28 +19,22 @@
 #
 ################################################################################
 
-from typing import Type, Union
-
-from unicorn import Uc
-from unicorn.unicorn_const import UC_ARCH_ARM
+from typing import Type
 
 from .cc_base import CallingConvention
 from .cc_aapcs32 import CallingConventionARM
 
 
-
 CC = {
-    (('arm', 'arm:el:32', 'arm:eb:32'), UC_ARCH_ARM): CallingConventionARM,
+    ('arm', 'arm:el:32', 'arm:eb:32'): CallingConventionARM,
 }
 
 
-def get_calling_convention_by_arch(
-    arch: Union[Uc, str]
-) -> Type[CallingConvention]:
-    return list(filter(
-        lambda cc_e: ((isinstance(arch, Uc) and arch._arch & cc_e[0][1])
-                      or (isinstance(arch, str) and arch in cc_e[0][0])),
-        CC.items()))[0][1]
+def get_calling_convention_by_arch(arch: str) -> Type[CallingConvention]:
+    for cc_arch_names, cc in CC.items():
+        if arch in cc_arch_names:
+            return cc
+    raise ValueError(f'calling convention not found for arch "{arch}"')
 
 
 def get_calling_convention_by_name(cc_name: str) -> Type[CallingConvention]:

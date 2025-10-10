@@ -24,8 +24,7 @@ import ctypes
 import os
 from typing import Any, Dict, Union, List, cast
 
-from unicorn import Uc
-
+from ..machine import DeviceCpu
 from ..dev_utils import pkg_object_loader, inherits_from
 from ..arch_ctypes.base_types import (
     CBaseType, DataPointerBase, CodePointerBase, IntegralType, FloatType,
@@ -33,7 +32,6 @@ from ..arch_ctypes.base_types import (
 )
 from ..hooking_engine.cc_base import FuncArg, ReturnValue
 from ..hooking_engine.engine import HookingContext
-
 
 
 class LogFormatterExtBase:
@@ -80,8 +78,8 @@ class FtraceLogFormatter:
         self._format_extensions: List[LogFormatterExtBase] = []
         if format_extensions:
             ext_path = os.path.abspath(
-                f'{os.path.dirname(os.path.realpath(__file__))}'
-                f'/function_tracer_ext')
+                f'{os.path.dirname(os.path.realpath(__file__))}/ext'
+            )
             format_ext_load = pkg_object_loader(ext_path,
                                                 predicate_is_log_format_ext)
             format_ext_load = cast(List[LogFormatterExtBase], format_ext_load)
@@ -95,16 +93,16 @@ class FtraceLogFormatter:
 
     @staticmethod
     def _get_str_ascii(
-        uc: Uc, address: int, max_terminator_search=512
+        cpu: DeviceCpu, address: int, max_terminator_search=512
     ) -> Union[str, None]:
         for i in range(0, max_terminator_search-1):
-            if bytes(uc.mem_read(address+i, 1)) == b'\x00':
-                return bytes(uc.mem_read(address, i)).decode('ascii')
+            if bytes(cpu.mem.read(address+i, 1)) == b'\x00':
+                return bytes(cpu.mem.read(address, i)).decode('ascii')
         return None
 
     def cdata_to_str(
         self,
-        uc: Uc,
+        cpu: DeviceCpu,
         cdata: CBaseType,
         ptr_dereference: bool = True,
         char_ptr_as_string: bool = True,
@@ -128,13 +126,13 @@ class FtraceLogFormatter:
 
                 if char_ptr_as_string_with_fixed_len:
                     if char_ptr_as_string_decoder == 'ascii':
-                        c_string = str(bytes(self._he._uc.mem_read(
+                        c_string = str(bytes(cpu.mem.read(
                             cdata.target_address, char_ptr_as_string_fixed_len)
                         ).split(b'\x00')[0])
 
                 else:
                     if char_ptr_as_string_decoder == 'ascii':
-                        c_string = self._get_str_ascii(uc, cdata.target_address)
+                        c_string = self._get_str_ascii(cpu, cdata.target_address)
 
                 if c_string:
                     c_string = c_string.replace('\n', '\\n')
@@ -148,7 +146,7 @@ class FtraceLogFormatter:
                         and (issubclass(type(cdata), IntegralType)
                              or issubclass(type(cdata), FloatType))):
                     reference = cdata.type()
-                    reference.raw = uc.mem_read(
+                    reference.raw = cpu.mem.read(
                         cdata.target_address, ctypes.sizeof(cdata.type))
                     reference_str = f' = {reference.value:#x}'
 
@@ -170,7 +168,7 @@ class FtraceLogFormatter:
         if self._include_arguments and args:
             args_string = '\n'.join([
                 f'    arg {i}: '
-                f'{self.cdata_to_str(ctx.uc, a.value, *self._cdata_to_str_args)}'
+                f'{self.cdata_to_str(ctx.cpu, a.value, *self._cdata_to_str_args)}'
                 f' ({a.value._name_}{" " if a.name else ""}'
                 f'{a.name if a.name else ""})'
                 for i, a in enumerate(args)])
@@ -191,7 +189,7 @@ class FtraceLogFormatter:
         ret_val_str = ''
         if return_value and self._include_return_value:
             ret_val_str = self.cdata_to_str(
-                ctx.uc, return_value.value, *self._cdata_to_str_args)
+                ctx.cpu, return_value.value, *self._cdata_to_str_args)
 
         if ret_val_str:
             ret_val_str = f' : return value = {ret_val_str}'

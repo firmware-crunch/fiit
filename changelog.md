@@ -4,6 +4,20 @@ This file details the changelog of fiit.
 
 ---
 
+## 0.3.0 - 2025-10-10
+
+**Full Changelog**: https://github.com/firmware-crunch/fiit/compare/0.1.0...0.3.0
+
+### Added
+
+- Add `machine` subpackage that provides an abstraction for machine, devices and cpu
+- Add `dev` subpackage that provides reusable devices over the `machine` abstraction
+- Add `emunicorn` subpackage that implements access to emulated Unicorn cpu
+- Provide reusable introspection tools over the `machine` abstraction
+- Add `FiitCpuFactory` interface to build configurable cpu instance
+- Add new plugin interface to build complex hardware and introspection scenario
+
+
 ## 0.2.0 - 2025-07-16
 
 **Full Changelog**: https://github.com/firmware-crunch/fiit/compare/0.1.0...0.2.0

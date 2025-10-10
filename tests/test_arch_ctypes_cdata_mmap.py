@@ -21,54 +21,61 @@
 
 import pytest
 
-from .fixtures.fixture_utils import minimal_address_space
+from .fixtures.fixture_utils import (
+    minimal_memory, minimal_memory_host, MinimalMemory
+)
 
-from fiit.arch_ctypes import(
+from fiit.arch_ctypes import (
     configure_ctypes, CDataMemMapper, CDataMemMapError, CDataMemMapCache
 )
 from fiit.arch_ctypes.base_types import DataPointerBase, UnsignedInt
 
 
-def test_map_cdata_to_host_memory(minimal_address_space):
-    address_space, mem_base, mem_size, mapping = minimal_address_space
+
+def test_map_cdata_to_host_memory(minimal_memory_host):
+    fake_mem = minimal_memory_host
+    region = fake_mem.regions[0]
+
     raw_value_1 = b'\x04\x03\x02\x01'
     raw_value_offset_1 = 0x50
 
-    mapping.seek(raw_value_offset_1)
-    mapping.write(raw_value_1)
+    region.host_mem.seek(raw_value_offset_1)
+    region.host_mem.write(raw_value_1)
 
     ctypes_config = configure_ctypes('arm:el:32', [globals()])
-    mem_mapper = CDataMemMapper(address_space, ctypes_config)
+    mem_mapper = CDataMemMapper(fake_mem, ctypes_config)
     cdata = mem_mapper.map_cdata(' unsigned   int ', 'xy',
-                                 mem_base + raw_value_offset_1)
+                                 region.base_address + raw_value_offset_1)
 
     assert isinstance(cdata, UnsignedInt)
     assert cdata.value == 0x01020304
 
 
-def test_map_cdata_pointer_to_host_memory(minimal_address_space):
-    address_space, mem_base, mem_size, mapping = minimal_address_space
+def map_cdata_pointer_to_memory(mem: MinimalMemory):
+    region = mem.regions[0]
+
     raw_value_1 = b'\x04\x03\x02\x01'
     raw_value_offset_1 = 0x50
     raw_value_2 = b'\x08\x07\x06\x05'
     raw_value_offset_2 = 0x58
     prt_address_offset = 0x8
 
-    mapping.seek(prt_address_offset)
-    mapping.write(b'\x50\x20\x00\x00')
-    mapping.seek(raw_value_offset_1)
-    mapping.write(raw_value_1)
-    mapping.seek(raw_value_offset_2)
-    mapping.write(raw_value_2)
+    mem.host_mem.seek(prt_address_offset)
+    mem.host_mem.write(b'\x50\x20\x00\x00')
+    mem.host_mem.seek(raw_value_offset_1)
+    mem.host_mem.write(raw_value_1)
+    mem.host_mem.seek(raw_value_offset_2)
+    mem.host_mem.write(raw_value_2)
 
     ctypes_config = configure_ctypes('arm:el:32', [globals()])
-    mem_mapper = CDataMemMapper(address_space, ctypes_config)
+    mem_mapper = CDataMemMapper(mem, ctypes_config)
 
     cdata = mem_mapper.map_cdata(' unsigned   int *', 'xy_ptr',
-                                 mem_base + prt_address_offset)
+                                 region.base_address + prt_address_offset)
 
     assert issubclass(type(cdata), DataPointerBase)
     assert cdata.type == UnsignedInt
+    assert cdata.target_address == region.base_address + raw_value_offset_1
     assert cdata.contents.value == 0x01020304
 
     cdata.target_address += 8
@@ -76,48 +83,52 @@ def test_map_cdata_pointer_to_host_memory(minimal_address_space):
     assert cdata.contents.value == 0x05060708
 
 
-def test_map_cdata_to_host_memory_invalid_overflow(minimal_address_space):
-    address_space, mem_base, mem_size, mapping = minimal_address_space
+def test_map_cdata_pointer_to_host_memory(minimal_memory_host):
+    map_cdata_pointer_to_memory(minimal_memory_host)
+
+
+def test_map_cdata_pointer_to_memory(minimal_memory):
+    map_cdata_pointer_to_memory(minimal_memory)
+
+
+def test_map_cdata_to_host_memory_invalid_overflow(minimal_memory):
+    mem = minimal_memory
+    region = mem.regions[0]
     ctypes_config = configure_ctypes('arm:el:32', [globals()])
-    mem_mapper = CDataMemMapper(address_space, ctypes_config)
+    mem_mapper = CDataMemMapper(mem, ctypes_config)
 
     with pytest.raises(CDataMemMapError):
-        mem_mapper.map_cdata('unsigned int ', 'y', mem_base + mem_size - 2)
+        overflow_addr = region.base_address + region.size - 2
+        mem_mapper.map_cdata('unsigned int ', 'y', overflow_addr)
 
 
-def test_map_cdata_to_host_memory_invalid_region(minimal_address_space):
-    address_space, mem_base, mem_size, mapping = minimal_address_space
+def test_map_cdata_to_invalid_region(minimal_memory):
+    mem = minimal_memory
+    region = mem.regions[0]
+
     ctypes_config = configure_ctypes('arm:el:32', [globals()])
-    mem_mapper = CDataMemMapper(address_space, ctypes_config)
+    mem_mapper = CDataMemMapper(mem, ctypes_config)
 
     with pytest.raises(CDataMemMapError):
-        mem_mapper.map_cdata('unsigned int ', 'y', mem_base + mem_size * 2)
+        invalid_addr = region.base_address + region.size + 128
+        mem_mapper.map_cdata('unsigned int ', 'y', invalid_addr)
 
 
-def test_map_cdata_to_host_memory_region_not_hosted(minimal_address_space):
-    address_space, mem_base, mem_size, mapping = minimal_address_space
-    address_space.memory_regions[0].host_mem_area = None
-    address_space.memory_regions[0].host_base_address = None
-    ctypes_config = configure_ctypes('arm:el:32', [globals()])
-    mem_mapper = CDataMemMapper(address_space, ctypes_config)
+def test_cache_find_cdata_by_name(minimal_memory):
+    mem = minimal_memory
+    region = mem.regions[0]
 
-    with pytest.raises(CDataMemMapError):
-        mem_mapper.map_cdata('unsigned int ', 'y', mem_base + 4)
-
-
-def test_map_cdata_mem_map_cache_find_cdata_by_name(minimal_address_space):
-    address_space, mem_base, mem_size, mapping = minimal_address_space
     raw_value_1 = b'\x04\x03\x02\x01'
     raw_value_offset_1 = 0x50
 
-    mapping.seek(raw_value_offset_1)
-    mapping.write(raw_value_1)
+    mem.host_mem.seek(raw_value_offset_1)
+    mem.host_mem.write(raw_value_1)
 
     ctypes_config = configure_ctypes('arm:el:32', [globals()])
-    mem_mapper = CDataMemMapper(address_space, ctypes_config)
+    mem_mapper = CDataMemMapper(mem, ctypes_config)
     mem_mapper.map_cdata(' unsigned   int ', 'xy',
-                         mem_base + raw_value_offset_1)
+                         region.base_address + raw_value_offset_1)
 
-    cdata_entry = CDataMemMapCache().find_cdata_by_name(address_space, 'xy')
+    cdata_entry = CDataMemMapCache().find_cdata_by_name(mem, 'xy')
 
     assert cdata_entry.cdata.value == 0x01020304

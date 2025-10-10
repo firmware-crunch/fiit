@@ -22,6 +22,7 @@
 from typing import Dict, Any, Optional, cast, List
 import logging
 
+from fiit.machine import DeviceCpu
 from fiit.arch_ctypes.base_types import DataPointerBase
 from fiit.arch_ctypes import CDataMemMapCache
 from fiit.hooking_engine.engine import HookingContext
@@ -38,23 +39,26 @@ class FreeRtOsTaskCommon:
                 .split(b'\x00')[0].decode('ascii'))
 
     def save_px_current_tcb_cdata_mapping(self, ext_ctx: Dict[str, Any]):
-        if address_space := ext_ctx.get('emulator_address_space', None):
-            if (cdata_cache_entry := CDataMemMapCache().find_cdata_by_name(
-                    address_space, 'pxCurrentTCB')):
-                px_current_tcb = cdata_cache_entry.cdata
-                self._px_current_tcb = cast(DataPointerBase, px_current_tcb)
-                self._log.info(f'{cdata_cache_entry.name} found in C data '
-                               f'memory map cache, mapped at '
-                               f'{cdata_cache_entry.address:#x}.')
-            else:
-                self._log.error(f'error: px_current_tcb cdata binding not '
-                                f'found cdata cache.')
+        cpu = cast(DeviceCpu, ext_ctx.get('cpu', None))
+        if cpu is None:
+            self._log.error(f'error: cpu not found in load extension context')
+            return
+
+        cdata_cache = CDataMemMapCache()
+        cdata_entry = cdata_cache.find_cdata_by_name(cpu.mem, 'pxCurrentTCB')
+
+        if cdata_entry is None:
+            self._log.error('px_current_tcb cdata binding not found in cache')
+            return
         else:
-            self._log.error(f'error: emulator_address_space not found in '
-                            f'load extension context.')
+            px_current_tcb = cdata_entry.cdata
+            self._px_current_tcb = cast(DataPointerBase, px_current_tcb)
+            self._log.info(
+                f'%s found in C data memory map cache, mapped at %s',
+                cdata_entry.name, cpu.mem.addr_to_str(cdata_entry.address))
 
 
-class FreeRtOsTaskFilterLogger(FunctionFilterExtBase, FreeRtOsTaskCommon):
+class FreeRTOSTaskFilterLogger(FunctionFilterExtBase, FreeRtOsTaskCommon):
     FILTER_NAME = 'freertos_task_filter'
     FILTER_CONFIG_SCHEMA = {
         FILTER_NAME: {
@@ -83,7 +87,7 @@ class FreeRtOsTaskFilterLogger(FunctionFilterExtBase, FreeRtOsTaskCommon):
         return False
 
 
-class FreeRtOsTaskLogFormatter(LogFormatterExtBase, FreeRtOsTaskCommon):
+class FreeRTOSTaskLogFormatter(LogFormatterExtBase, FreeRtOsTaskCommon):
     FORMATTER_NAME = 'freertos_task_context_formatter'
     FORMATTER_CONFIG_SCHEMA = {FORMATTER_NAME: {'type': 'dict'}}
 

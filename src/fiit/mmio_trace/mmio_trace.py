@@ -23,9 +23,8 @@ from dataclasses import dataclass
 from typing import Dict, List, Union, Optional
 
 from cmsis_svd.model import SVDRegister
-from unicorn import Uc
 
-from ..emu.arch_unicorn import ArchUnicorn
+from fiit.machine import DeviceCpu
 
 from .svd_helper import SvdIndex, SvdLoader
 from .interceptor import MonitoredMemory
@@ -202,11 +201,10 @@ class MmioDataTrace:
 
 
 class MmioTrace:
-    LOGGER_NAME = 'fiit.mmio_trace'
 
     def __init__(
         self,
-        uc: Uc,
+        cpu: DeviceCpu,
         monitored_memory: Dict,
         mmio_filters: Dict = None,
         svd_resource: str = None,
@@ -214,6 +212,8 @@ class MmioTrace:
         log: bool = False,
         log_show_field_states: bool = True
     ):
+        self.cpu = cpu
+
         ########################################################################
         # SVD Data
         ########################################################################
@@ -223,15 +223,16 @@ class MmioTrace:
         ########################################################################
         # Monitored Memory
         ########################################################################
-        self.mem_bit_size = ArchUnicorn.get_mem_bit_size_by_uc(uc)
+        self.mem_bit_size = cpu.bits.value
         self._monitored_memory = MonitoredMemory(
             self.mem_bit_size, **monitored_memory, svd_index=svd_index)
 
         ########################################################################
         # Logging
         ########################################################################
+        logger_name = f'fiit.mmio_trace.dev@{cpu.dev_name}'
         mmio_logger = MmioLogger(
-            self.mem_bit_size, self._monitored_memory, self.LOGGER_NAME,
+            self.mem_bit_size, self._monitored_memory, logger_name,
             log_show_field_states)
 
         ########################################################################
@@ -264,7 +265,7 @@ class MmioTrace:
         # Memory Access Interceptor
         ########################################################################
         MmioInterceptor(
-            uc,
+            self.cpu,
             self._monitored_memory,
             self._read_callbacks,
             self._write_callbacks,

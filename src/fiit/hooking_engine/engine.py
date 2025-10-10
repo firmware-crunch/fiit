@@ -23,25 +23,22 @@ import logging
 import inspect
 from typing import cast,  Any, Optional, Literal, List, Dict, Union, Callable
 
-from unicorn import Uc
-from unicorn.unicorn_const import UC_HOOK_BLOCK
-
-from ..config_loader import ConfigLoader
-from ..dev_utils import pkg_module_object_loader
-from ..emu.arch_unicorn import ArchUnicorn
-from ..arch_ctypes import configure_ctypes, CTypesTranslator, PYCPARSER
-from ..arch_ctypes.base_types import FunctionSpec, ArgSpec
+from fiit.machine import DeviceCpu
+from fiit.emunicorn import CpuUnicorn
+from fiit.config_loader import ConfigLoader
+from fiit.dev_utils import pkg_module_object_loader
+from fiit.arch_ctypes import configure_ctypes, CTypesTranslator, PYCPARSER
+from fiit.arch_ctypes.base_types import FunctionSpec, ArgSpec
 
 from .cc import get_calling_convention_by_arch, get_calling_convention_by_name
 from .engine_types import (
     FuncHookMeta, HookingContext, FUNC_HOOK_META_TAG, HookHandler,
-    InterceptorPreHookConfig, InterceptorPostHookConfig, InterceptorHookEntry
+    InterceptorPreHookConfig, InterceptorPostHookConfig, InterceptorHookEntry,
+    HookingEngineException
 )
 
 
-
 class HookingEngine:
-    LOGGER_NAME = 'fiit.hooking_engine'
 
     SCHEMA_FUNC_FILE = {
         'type': 'list',
@@ -66,21 +63,21 @@ class HookingEngine:
 
     def __init__(
         self,
-        uc: Uc,
+        cpu: DeviceCpu,
         ctypes_options: Dict['str', 'str'] = None,
         ctypes_flavor: int = PYCPARSER,
         default_cc_options: Dict['str', Any] = None,
         context_user_data: Dict['str', Any] = None,
     ):
-        ########################################################################
-        # Emulator
-        ########################################################################
-        self._uc = uc
+        self.cpu = cpu
+        arch_str = (f'{self.cpu.ARCH_NAME}'
+                    f':{self.cpu.endian.label_hc_lc}'
+                    f':{self.cpu.bits.value}')
 
         ########################################################################
         # Calling convention
         ########################################################################
-        self._default_cc = get_calling_convention_by_arch(uc)
+        self._default_cc = get_calling_convention_by_arch(arch_str)
         self._default_cc_options = (default_cc_options if default_cc_options
                                     else dict())
         self._default_cc_ctypes_options = ctypes_options
@@ -88,8 +85,7 @@ class HookingEngine:
         ########################################################################
         # C Data Types
         ########################################################################
-        ctypes_arch = ArchUnicorn.get_generic_arch_str_by_uc(uc)
-        ctypes_config = configure_ctypes(ctypes_arch, ctypes_options)
+        ctypes_config = configure_ctypes(arch_str, ctypes_options)
         self._cparser = CTypesTranslator(ctypes_config, flavor=ctypes_flavor)
 
         ########################################################################
@@ -103,8 +99,17 @@ class HookingEngine:
         self._config_loader = ConfigLoader()
         self._targets: Dict[int, InterceptorHookEntry] = dict()
         self._targets_return: Dict[int, List[InterceptorHookEntry]] = dict()
-        self._uc.hook_add(UC_HOOK_BLOCK, self._block_interceptor)
-        self._log = logging.getLogger(self.LOGGER_NAME)
+
+        if isinstance(self.cpu.cpu, CpuUnicorn):
+            cpu_uc = cast(CpuUnicorn, self.cpu.cpu)
+            cpu_uc.hook_block_all(self._block_interceptor)
+        else:
+            raise HookingEngineException(
+                f'Hooking in machine backend "{self.cpu.backend_name}" '
+                f'not yet implement')
+
+        logger_name = f'fiit.hooking_engine.dev@{cpu.dev_name}'
+        self._log = logging.getLogger(logger_name)
         self._context_user_data = (context_user_data if context_user_data
                                    else dict())
 
@@ -133,10 +138,10 @@ class HookingEngine:
             func_arg_ctypes = []
 
         if calling_convention:
-            cc = get_calling_convention_by_name(calling_convention)(self._uc)
+            cc = get_calling_convention_by_name(calling_convention)(self.cpu)
         else:
             cc = self._default_cc(
-                self._uc, self._default_cc_ctypes_options,
+                self.cpu, self._default_cc_ctypes_options,
                 **self._default_cc_options)
 
         return FunctionSpec(function, return_ctype, func_arg_ctypes, cc, address)
@@ -156,7 +161,7 @@ class HookingEngine:
         return spec[0] if spec else None
 
     def get_spec_by_name(self, func_name: str) -> Union[FunctionSpec, None]:
-        spec = list(filter(lambda s: s.name== func_name, self.func_spec))
+        spec = list(filter(lambda s: s.name == func_name, self.func_spec))
         return spec[0] if spec else None
 
     def register_function_file(self, spec_file: str):
@@ -189,7 +194,7 @@ class HookingEngine:
                 spec.cc = abi
             else:
                 spec.cc = self._default_cc(
-                    self._uc, self._default_cc_ctypes_options,
+                    self.cpu, self._default_cc_ctypes_options,
                     **self._default_cc_options)
 
             self.func_spec.append(spec)
@@ -326,7 +331,7 @@ class HookingEngine:
             if issubclass(hh, HookHandler):
                 self.register_hook_handler(hh())
 
-    def _block_interceptor(self, _: Uc, address: int, __: int, ___: dict):
+    def _block_interceptor(self, _: DeviceCpu, address: int):
         if target := self._targets.get(address):
             cc = target.func_spec.cc
             return_address = cc.get_return_address()
@@ -338,7 +343,7 @@ class HookingEngine:
                 # very time-consuming, checked by profiling
                 # cpu_context = cc.get_cpu_context()
                 ctx = HookingContext(
-                    self, return_address, self._uc, self._log, None,
+                    self, return_address, self.cpu, self._log, None,
                     target.func_spec, self._context_user_data)
 
                 if ph.cc_get_arguments:
@@ -348,9 +353,9 @@ class HookingEngine:
                 ph.hook_handler(ctx, *f_args)
 
             if target.replace_hook and target.replace_hook.active:
-                ctx = HookingContext(self, return_address, self._uc, self._log,
-                                     cc.get_cpu_context(), target.func_spec,
-                                     self._context_user_data)
+                ctx = HookingContext(self, return_address, self.cpu,
+                                     self._log, cc.get_cpu_context(),
+                                     target.func_spec, self._context_user_data)
 
                 if target.replace_hook.cc_get_arguments:
                     f_args = cc.get_arguments(target.func_spec)
@@ -371,8 +376,8 @@ class HookingEngine:
                 # very time-consuming, checked by profiling
                 # cpu_context = cc.get_cpu_context()
                 ctx = HookingContext(
-                    self, address, self._uc, self._log, None, target.func_spec,
-                    self._context_user_data)
+                    self, address, self.cpu, self._log, None,
+                    target.func_spec, self._context_user_data)
 
                 return_value = None
                 if ph.cc_get_return_value:

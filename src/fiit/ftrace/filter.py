@@ -77,8 +77,8 @@ class FunctionRuntimeFilter:
 
         if filter_extensions:
             ext_path = os.path.abspath(
-                f'{os.path.dirname(os.path.realpath(__file__))}'
-                f'/function_tracer_ext')
+                f'{os.path.dirname(os.path.realpath(__file__))}/ext'
+            )
             filter_ext_load = pkg_object_loader(ext_path,
                                                 predicate_is_func_trace_ext)
             filter_ext_load = cast(List[FunctionFilterExtBase], filter_ext_load)

@@ -19,7 +19,10 @@
 #
 ################################################################################
 
-from typing import List, Any, Callable, Type, Dict, Optional, Union, cast, Tuple
+from typing import (
+    List, Any, Callable, Type, Dict, Optional, Union, cast, Tuple,
+    get_origin, get_args
+)
 import logging
 import os
 import inspect
@@ -87,6 +90,13 @@ class FiitPlugin:
     CONFIG_SCHEMA: dict
     CONFIG_SCHEMA_RULE_SET_REGISTRY: Optional[tuple]
 
+    def __init__(self):
+        self._log = logging.getLogger(f'fiit.plugin@{self.NAME}')
+
+    @property
+    def log(self) -> logging.Logger:
+        return self._log
+
     def plugin_load(
         self,
         plugins_context: FiitPluginContext,
@@ -146,15 +156,13 @@ class PluginManager:
         requirements = {}
 
         for req in getattr(plugin, 'REQUIREMENTS', []):
-            if not (req_instance := init_context.context.get(req.name)):
+            req_instance = init_context.context.get(req.name)
+
+            if not req_instance:
                 raise PluginRequirementNotFound(
                     f'Plugin requirement "{req.name}" not found during '
                     f'plugin creation for "{str(plugin)}".')
-            if not isinstance(req_instance, req.instance_type):
-                raise PluginRequirementInvalidType(
-                    f'Plugin requirement "{req.name}" invalid instance '
-                    f'type, expected '
-                    f'"{str(req.instance_type)}".')
+
             requirements.update({req.name: req_instance})
 
         return requirements
@@ -166,12 +174,8 @@ class PluginManager:
         optional_requirements = {}
 
         for req in getattr(plugin, 'OPTIONAL_REQUIREMENTS', []):
-            if req_instance := init_context.context.get(req.name):
-                if not isinstance(req_instance, req.instance_type):
-                    raise PluginRequirementInvalidType(
-                        f'Plugin requirement "{req.name}" invalid instance '
-                        f'type, expected '
-                        f'"{req.instance_type.__class__.__name__}".')
+            req_instance = init_context.context.get(req.name, None)
+            if req_instance is not None:
                 optional_requirements.update({req.name: req_instance})
 
         return optional_requirements
@@ -220,8 +224,9 @@ class PluginManager:
 
                 if not search_optional_requirements and not dependency_found:
                     raise PluginRequirementNotFound(
-                        f'Plugin require "{require_search}" not provided by any '
-                        f'configured plugin.')
+                        f'"{require_search.name}" object require not found in '
+                        f'plugin context, required by plugin '
+                        f'"{source_plugin.NAME}"')
 
             else:
                 raise PluginRequirementInvalidType(

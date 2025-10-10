@@ -22,19 +22,23 @@
 from typing import Callable, Dict, Optional, Any, Type
 import copy
 
-from unicorn import Uc
-from unicorn.arm_const import UC_ARM_REG_LR
-
+from fiit.machine import DeviceCpu
 from fiit.hooking_engine.cc_base import CallingConvention
 from fiit.arch_ctypes.config import configure_ctypes
 from fiit.arch_ctypes.translator import CTypesTranslator
 from fiit.arch_ctypes.base_types import (
     DataPointerBase,
-    CBaseType, FundBaseType, IntegralType, FloatType,
-    ArgSpec, FunctionSpec, Struct)
+    CBaseType,
+    FundBaseType,
+    IntegralType,
+    FloatType,
+    ArgSpec,
+    FunctionSpec,
+    Struct
+)
 
+from ..cpu_utils import Blob2Cpu, CodeBreakpoint
 from ..blobs.meta_bin_blob import MetaBinBlob
-from ..unicorn_utils import BinBlob2Emulator, CodeBreakpoint
 from ..cc.source_code_analyzer import MetaFunc
 
 
@@ -45,7 +49,7 @@ class CallingConventionBaseTester:
         self.cc = cc
         self.meta_fw = meta_fw
         self.meta_src = meta_fw.extra['cc_test_data']
-        self.emu: Optional[BinBlob2Emulator] = None
+        self.emu: Optional[Blob2Cpu] = None
         self.cp: Optional[CodeBreakpoint] = None
 
         # test states
@@ -160,8 +164,8 @@ class CallingConventionBaseTester:
                     cc_kwargs.update({'hard_fp': True})
 
             # Prepare Emulator
-            self.emu = BinBlob2Emulator(self.meta_fw, self.meta_fw.arch_info)
-            self.cp = CodeBreakpoint(self.emu.uc, self.test, [func.address])
+            self.emu = Blob2Cpu(self.meta_fw)
+            self.cp = CodeBreakpoint(self.emu.cpu, self.test, [func.address])
 
             # run test
             self._func_addr = func.address
@@ -180,7 +184,7 @@ class CallingConventionBaseTester:
     def test_hook_after_emu(self):
         pass
 
-    def test(self, uc: Uc, address: int):
+    def test(self, cpu: DeviceCpu, address: int):
         raise NotImplementedError('Test not implemented.')
 
 
@@ -188,9 +192,9 @@ class CallingConventionGetArgumentsTester(CallingConventionBaseTester):
     def test_hook_after_emu(self):
         assert self.cp.break_count == 1
 
-    def test(self, uc: Uc, address: int):
+    def test(self, cpu: DeviceCpu, address: int):
         print(f'-> testing "{self._tested_func_spec.name}()"', end='')
-        cc = self.cc(uc, **self._cc_kwargs)
+        cc = self.cc(cpu, **self._cc_kwargs)
         collect_value = cc.get_arguments(self._tested_func_spec)
 
         assert len(collect_value) == len(self._expected_arg_values)
@@ -209,11 +213,11 @@ class CallingConventionSetArgumentsTester(CallingConventionBaseTester):
     def test_hook_after_emu(self):
         assert self.cp.break_count == 1
 
-    def test(self, uc: Uc, address: int):
+    def test(self, cpu: DeviceCpu, address: int):
         print(f'-> testing "{self._tested_func_spec.name}()"', end='')
         mutated_arg_values = self._mutate_argument_values(
             self._expected_arg_values)
-        cc = self.cc(uc, **self._cc_kwargs)
+        cc = self.cc(cpu, **self._cc_kwargs)
         cc.set_arguments(self._tested_func_spec, mutated_arg_values)
         collect_value = cc.get_arguments(self._tested_func_spec)
         assert len(collect_value) == len(mutated_arg_values)
@@ -229,15 +233,15 @@ class CallingConventionGetReturnValue(CallingConventionBaseTester):
     def test_hook_after_emu(self):
         assert self.cp.break_count == 2
 
-    def test(self, uc: Uc, address: int):
+    def test(self, cpu: DeviceCpu, address: int):
         if address == self._func_addr and self.cp.break_count == 1:
-            self.cp.code_tracer_breaks.append(uc.reg_read(UC_ARM_REG_LR))
-            cc = self.cc(uc, **self._cc_kwargs)
+            self.cp.code_tracer_breaks.append(cpu.regs.lr)
+            cc = self.cc(cpu, **self._cc_kwargs)
             self._cc_return_value_test_ret_addr = cc.get_return_address()
         elif(address == self._cc_return_value_test_ret_addr
              and self.cp.break_count == 2):
             print(f'-> testing "{self._tested_func_spec.name}()"', end='')
-            cc = self.cc(uc, **self._cc_kwargs)
+            cc = self.cc(cpu, **self._cc_kwargs)
             ret = cc.get_return_value(self._tested_func_spec)
             if self._tested_func_spec.return_value_type is not None:
                 assert ret.value == self._expected_return_value
@@ -250,10 +254,10 @@ class CallingConventionSetReturnValue(CallingConventionBaseTester):
     def test_hook_after_emu(self):
         assert self.cp.break_count == 2
 
-    def test(self, uc: Uc, address: int):
+    def test(self, cpu: DeviceCpu, address: int):
         if address == self._func_addr and self.cp.break_count == 1:
-            self.cp.code_tracer_breaks.append(uc.reg_read(UC_ARM_REG_LR))
-            cc = self.cc(uc, **self._cc_kwargs)
+            self.cp.code_tracer_breaks.append(cpu.regs.lr)
+            cc = self.cc(cpu, **self._cc_kwargs)
             self._cc_return_value_test_ret_addr = cc.get_return_address()
         elif(address == self._cc_return_value_test_ret_addr
              and self.cp.break_count == 2):
@@ -262,7 +266,7 @@ class CallingConventionSetReturnValue(CallingConventionBaseTester):
             if mutated_return_value is not None:
                 self._mutate_value(mutated_return_value)
 
-            cc = self.cc(uc, **self._cc_kwargs)
+            cc = self.cc(cpu, **self._cc_kwargs)
             cc.set_return_value(self._tested_func_spec, mutated_return_value)
             ret = cc.get_return_value(self._tested_func_spec)
             if self._tested_func_spec.return_value_type is not None:
@@ -317,6 +321,7 @@ class CallingConventionCall(CallingConventionBaseTester):
     def test_hook_after_emu(self):
         assert (len(self._collect_func_arg_value)
                 == len(self._mutated_arg_values))
+
         for arg_idx, func_arg in enumerate(self._collect_func_arg_value):
             assert isinstance(func_arg.value,
                               type(self._mutated_arg_values[arg_idx]))
@@ -330,32 +335,35 @@ class CallingConventionCall(CallingConventionBaseTester):
                 == self.meta_src.cc_call_test_info.cc_call_test_stack_canary)
 
         assert self.cp.break_count == 4
+        print('    [PASSED]')
 
-    def test(self, uc: Uc, address: int):
+    def test(self, cpu: DeviceCpu, address: int):
         if(address == self._cc_call_test_wrapper.address
                 and self.cp.break_count == 1):
             self._cc_call_test_wrapper_ret_addr = \
-                self.cc(uc, **self._cc_kwargs).get_return_address()
+                self.cc(cpu, **self._cc_kwargs).get_return_address()
             self.cp.code_tracer_breaks.append(
                 self._cc_call_test_wrapper_ret_addr)
 
         elif(address == self.meta_src.cc_call_test_info.cc_call_test_call_site
                 and self.cp.break_count == 2):
-            print(f'-> testing "{self._tested_func_spec.name}()"', end='')
-            cc = self.cc(uc, **self._cc_kwargs)
+            print(
+                f'-> testing "{self._tested_func_spec.name}()"', end='',
+                flush=True
+            )
+            cc = self.cc(cpu, **self._cc_kwargs)
             self._collect_func_return_value = cc.call(self._tested_func_spec,
                                                       self._mutated_arg_values)
-            print('    [PASSED]')
 
         elif(address == self._tested_func_spec.address
              and self.cp.break_count == 3):
-            cc = self.cc(uc, **self._cc_kwargs)
+            cc = self.cc(cpu, **self._cc_kwargs)
             self._collect_func_arg_value = cc.get_arguments(
                 self._tested_func_spec)
 
         elif(address == self._cc_call_test_wrapper_ret_addr
              and self.cp.break_count == 4):
-            cc = self.cc(uc, **self._cc_kwargs)
+            cc = self.cc(cpu, **self._cc_kwargs)
             self._collect_stack_canary = cc.get_return_value(
                 self._cc_call_test_wrapper)
             self.cp.code_tracer_breaks = []

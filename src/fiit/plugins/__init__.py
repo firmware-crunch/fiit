@@ -19,35 +19,59 @@
 #
 ################################################################################
 
-import unicorn
+__all__ = [
+    'CTX_MACHINE',
+    'CTX_REQ_MACHINE',
+    'CTX_DBG',
+    'CTX_REQ_DBG',
+    'CTX_CDATA_MMAP',
+    'CTX_REQ_CDATA_MMAP',
+    'CTX_MMIO_TRACER',
+    'CTX_REQ_MMIO_TRACER',
+    'CTX_MMIO_DBG',
+    'CTX_REQ_MMIO_DBG',
+    'CTX_SHELL',
+    'CTX_REQ_SHELL',
+    'CTX_HOOKING_ENGINE',
+    'CTX_REQ_HOOKING_ENGINE',
+    'CTX_FTRACER',
+    'CTX_REQ_FTRACER'
+]
 
-from fiit.plugin import ContextObject
+from typing import List
+
 from fiit.shell import Shell
-from fiit.emu.emu_types import AddressSpace, Architecture
+from fiit.plugin import ContextObject
+from fiit.machine import Machine
+from fiit.dbg import Debugger
 from fiit.arch_ctypes import CDataMemMapper
-
-from fiit.emu.emulator import Emulator
-from fiit.dbg.debugger import Debugger
-from fiit.mmio_trace import MmioTrace, MmioDbg
-from fiit.emu.arch_arm.arm import ArchArm
-from fiit.emu.hw.pl190 import ArmPl190
-from fiit.emu.hw.pl190_int_gen import Pl190IntGenerator
 from fiit.hooking_engine.engine import HookingEngine
 from fiit.ftrace.ftrace import Ftrace
+from fiit.mmio_trace import MmioTrace, MmioDbg
+
+# ==============================================================================
 
 
+CTX_MACHINE = ContextObject('machine', Machine)
+CTX_REQ_MACHINE = CTX_MACHINE.as_require()
 
-CTX_UNICORN_UC = ContextObject('unicorn_uc', unicorn.Uc)
+CTX_DBG = ContextObject('dbg', List[Debugger])
+CTX_REQ_DBG = CTX_DBG.as_require()
+
+CTX_CDATA_MMAP = ContextObject('cdata_mmap', List[CDataMemMapper])
+CTX_REQ_CDATA_MMAP = CTX_CDATA_MMAP.as_require()
+
+CTX_MMIO_TRACER = ContextObject('mmio_tracer', List[MmioTrace])
+CTX_REQ_MMIO_TRACER = CTX_MMIO_TRACER.as_require()
+
+CTX_MMIO_DBG = ContextObject('mmio_dbg', List[MmioDbg])
+CTX_REQ_MMIO_DBG = CTX_MMIO_DBG.as_require()
+
+CTX_HOOKING_ENGINE = ContextObject('hooking_engine', List[HookingEngine])
+CTX_REQ_HOOKING_ENGINE = CTX_HOOKING_ENGINE.as_require()
+
+CTX_FTRACER = ContextObject('ftracer', List[Ftrace])
+CTX_REQ_FTRACER = CTX_FTRACER.as_require()
+
 CTX_SHELL = ContextObject('shell', Shell)
-CTX_EMULATOR_ADDRESS_SPACE = ContextObject('emulator_address_space', AddressSpace)
-CTX_EMULATOR_ARCH = ContextObject('emulator_arch', Architecture)
-CTX_CDATA_MEMORY_MAPPER = ContextObject('cdata_memory_mapper', CDataMemMapper)
-CTX_EMULATOR = ContextObject('emulator', Emulator)
-CTX_DBG = ContextObject('debugger', Debugger)
-CTX_MMIO_TRACER = ContextObject('mmio_tracer', MmioTrace)
-CTX_MMIO_DBG = ContextObject('mmio_dbg', MmioDbg)
-CTX_ARCH_ARM = ContextObject('arch_arm', ArchArm)
-CTX_ARM_PL190 = ContextObject('arm_pl190', ArmPl190)
-CTX_PL190_INT_GENERATOR = ContextObject('pl190_int_generator', Pl190IntGenerator)
-CTX_HOOKING_ENGINE = ContextObject('hooking_engine', HookingEngine)
-CTX_FTRACE = ContextObject('ftrace', Ftrace)
+CTX_REQ_SHELL = CTX_SHELL.as_require()

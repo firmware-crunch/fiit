@@ -19,8 +19,9 @@
 #
 ################################################################################
 
-from typing import Any, Dict
+from typing import Any, Dict, cast, List
 
+from fiit.hooking_engine import HookingEngine
 from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.dev_utils import pkg_object_loader
 from fiit.ftrace import (
@@ -28,8 +29,7 @@ from fiit.ftrace import (
     FUNC_TRACER_EXT_DIR, FUNC_TRACE_LOG_BIN, FUNC_TRACE_LOG_PYTHON
 )
 
-from . import CTX_HOOKING_ENGINE, CTX_FTRACE
-
+from . import CTX_REQ_HOOKING_ENGINE, CTX_FTRACER
 
 
 def _get_filter_ext_conf_schema() -> dict:
@@ -60,62 +60,66 @@ def normalize_log_output_type(value: dict) -> int:
 
 class PluginFtrace(FiitPlugin):
     NAME = 'plugin_ftrace'
-    REQUIREMENTS = [CTX_HOOKING_ENGINE.as_require()]
-    OBJECTS_PROVIDED = [CTX_FTRACE]
+    REQUIREMENTS = [CTX_REQ_HOOKING_ENGINE]
+    OBJECTS_PROVIDED = [CTX_FTRACER]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
-            'schema': {
-                'cdata_types_files': {
-                    'type': 'list',
-                    'schema': {'type': 'string'},
-                    'required': False
-                },
-                'function_data_files': {
-                    'type': 'list',
-                    'schema': {'type': 'string'},
-                    'required': False
-                },
-                'log_output_type': {
-                    'type': 'string',
-                    'allowed': list(_log_output_value_mapping.keys()),
-                    'coerce': normalize_log_output_type,
-                    'required': False
-                },
-                'log_return_value': {
-                    'type': 'boolean', 'required': False},
+            'keysrules': {'type': 'string'},
+            'valuesrules': {
+                'type': 'dict',
+                'schema': {
+                    'cdata_types_files': {
+                        'type': 'list',
+                        'schema': {'type': 'string'},
+                        'required': False
+                    },
+                    'function_data_files': {
+                        'type': 'list',
+                        'schema': {'type': 'string'},
+                        'required': False
+                    },
+                    'log_output_type': {
+                        'type': 'string',
+                        'allowed': list(_log_output_value_mapping.keys()),
+                        'coerce': normalize_log_output_type,
+                        'required': False
+                    },
+                    'log_return_value': {
+                        'type': 'boolean', 'required': False},
 
-                'format_include_arguments': {
-                    'type': 'boolean', 'required': False},
-                'format_arg_ptr_dereference': {
-                    'type': 'boolean', 'required': False},
-                'format_arg_char_ptr_as_string': {
-                    'type': 'boolean', 'required': False},
-                'format_arg_char_ptr_as_string_decoder': {
-                    'type': 'string', 'allowed': ['ascii'], 'required': False},
-                'format_arg_char_ptr_as_string_with_fixed_len': {
-                    'type': 'boolean', 'required': False},
-                'format_arg_char_ptr_as_string_fixed_len': {
-                    'type': 'integer', 'required': False},
-                'format_extensions': {
-                    'type': 'dict',
-                    'schema': _get_log_format_ext_conf_schema(),
-                    'required': False
-                },
+                    'format_include_arguments': {
+                        'type': 'boolean', 'required': False},
+                    'format_arg_ptr_dereference': {
+                        'type': 'boolean', 'required': False},
+                    'format_arg_char_ptr_as_string': {
+                        'type': 'boolean', 'required': False},
+                    'format_arg_char_ptr_as_string_decoder': {
+                        'type': 'string', 'allowed': ['ascii'], 'required': False},
+                    'format_arg_char_ptr_as_string_with_fixed_len': {
+                        'type': 'boolean', 'required': False},
+                    'format_arg_char_ptr_as_string_fixed_len': {
+                        'type': 'integer', 'required': False},
+                    'format_extensions': {
+                        'type': 'dict',
+                        'schema': _get_log_format_ext_conf_schema(),
+                        'required': False
+                    },
 
-                'filter_include_function': {
-                    'type': 'list', 'schema': {'type': 'list'}, 'required': False},
-                'filter_exclude_function': {
-                    'type': 'list', 'schema': {'type': 'list'}, 'required': False},
-                'filter_include_return_address': {
-                    'type': 'list', 'schema': {'type': 'list'}, 'required': False},
-                'filter_exclude_return_address': {
-                    'type': 'list', 'schema': {'type': 'list'}, 'required': False},
-                'filter_extensions': {
-                    'type': 'dict',
-                    'schema': _get_filter_ext_conf_schema(),
-                    'required': False
-                },
+                    'filter_include_function': {
+                        'type': 'list', 'schema': {'type': 'list'}, 'required': False},
+                    'filter_exclude_function': {
+                        'type': 'list', 'schema': {'type': 'list'}, 'required': False},
+                    'filter_include_return_address': {
+                        'type': 'list', 'schema': {'type': 'list'}, 'required': False},
+                    'filter_exclude_return_address': {
+                        'type': 'list', 'schema': {'type': 'list'}, 'required': False},
+                    'filter_extensions': {
+                        'type': 'dict',
+                        'schema': _get_filter_ext_conf_schema(),
+                        'required': False
+                    },
+                }
             }
         }
     }
@@ -127,10 +131,27 @@ class PluginFtrace(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
+        tracer: List[Ftrace] = []
+        hook_engines = cast(List[HookingEngine],
+                            requirements[CTX_REQ_HOOKING_ENGINE.name])
 
-        ft = Ftrace(
-            requirements[CTX_HOOKING_ENGINE.name],
-            **plugin_config,
-            data=dict(plugins_context.context))
+        for cpu_name, config in plugin_config.items():
+            hook_engine_found = False
 
-        plugins_context.add(CTX_FTRACE.name, ft)
+            for engine in hook_engines:
+                if engine.cpu.dev_name == cpu_name:
+                    data = {
+                        'cpu': engine.cpu,
+                        'hooking_engine': engine,
+                        'plugin_context': plugins_context.context
+                    }
+                    ftracer = Ftrace(engine, **config, data=data)
+                    tracer.append(ftracer)
+                    hook_engine_found = True
+
+            if not hook_engine_found:
+                raise RuntimeError(
+                    f'hooking engine not found for cpu "{cpu_name}"'
+                )
+
+        plugins_context.add(CTX_FTRACER.name, tracer)

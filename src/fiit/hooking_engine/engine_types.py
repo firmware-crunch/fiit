@@ -25,9 +25,8 @@ import inspect
 from dataclasses import dataclass, field
 from typing import Any, Optional, Literal, List, Union, Callable
 
-from unicorn import Uc
-
-from ..arch_ctypes.base_types import FunctionSpec
+from fiit.machine import DeviceCpu
+from fiit.arch_ctypes.base_types import FunctionSpec
 
 from .cc_base import CpuContext
 
@@ -114,8 +113,12 @@ class InterceptorHookEntry:
 class HookingContext:
     interceptor_engine: Any
     return_address: int
-    uc: Uc
+    cpu: DeviceCpu
     log: logging.Logger
     cpu_context: CpuContext
     func_spec: FunctionSpec
     user_data: Any = None
+
+
+class HookingEngineException(Exception):
+    pass

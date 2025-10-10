@@ -21,13 +21,13 @@
 
 import ctypes
 from dataclasses import dataclass
-from typing import cast, Dict, Union
+from typing import Dict, Union
 
 from ..dev_utils import SingletonPattern
 from ..config_loader import ConfigLoader
-from ..emu.emu_types import AddressSpace, MemoryRegion
+from ..machine import Memory
 
-from .base_types import CBaseType, DataPointerBase
+from .base_types import CBaseType, DataPointerBase, mem_sync_ctypes_factory
 from .config import CTypesConfig
 from .translator import CTypesTranslator
 
@@ -41,28 +41,28 @@ class CDataMemMapEntry:
 
 class CDataMemMapCache(metaclass=SingletonPattern):
     def __init__(self):
-        self._cache_registry: Dict[AddressSpace, Dict[str, CDataMemMapEntry]] \
+        self._cache_registry: Dict[Memory, Dict[str, CDataMemMapEntry]] \
             = dict()
 
-    def add_cache_entry(self, address_space: AddressSpace):
-        if address_space not in self._cache_registry:
-            self._cache_registry.update({address_space: dict()})
+    def add_cache_entry(self, memory: Memory):
+        if memory not in self._cache_registry:
+            self._cache_registry.update({memory: dict()})
 
     def get_cache_entry(
-        self, address_space: AddressSpace
+        self, memory: Memory
     ) -> Union[Dict[str, CDataMemMapEntry], None]:
-        return self._cache_registry.get(address_space, None)
+        return self._cache_registry.get(memory, None)
 
     def store_cdata(
-        self, address_space: AddressSpace, cdata_entry: CDataMemMapEntry
+        self, memory: Memory, cdata_entry: CDataMemMapEntry
     ):
-        self._cache_registry[address_space].update(
+        self._cache_registry[memory].update(
             {cdata_entry.name: cdata_entry})
 
     def find_cdata_by_name(
-        self, address_space: AddressSpace, name: str
+        self, memory: Memory, name: str
     ) -> Union[CDataMemMapEntry, None]:
-        if cache_entry := self._cache_registry.get(address_space):
+        if cache_entry := self._cache_registry.get(memory):
             return cache_entry.get(name, None)
 
 
@@ -84,18 +84,21 @@ class CDataMemMapper:
         }
     }
 
-    def __init__(self, address_space: AddressSpace, ctypes_config: CTypesConfig):
-        self._address_space = address_space
+    def __init__(self, memory: Memory, ctypes_config: CTypesConfig):
+        self._mem = memory
         self._cdata_mem_map_cache = CDataMemMapCache()
-        self._cdata_mem_map_cache.add_cache_entry(address_space)
+        self._cdata_mem_map_cache.add_cache_entry(memory)
         self._ctypes_translator = CTypesTranslator(ctypes_config)
 
+    @property
+    def mem(self) -> Memory:
+        return self._mem
+
     def get_all_mapping(self) -> Union[Dict[str, CDataMemMapEntry], None]:
-        return self._cdata_mem_map_cache.get_cache_entry(self._address_space)
+        return self._cdata_mem_map_cache.get_cache_entry(self._mem)
 
     def get_cdata_mapping(self, name: str) -> Union[CDataMemMapEntry, None]:
-        return self._cdata_mem_map_cache.find_cdata_by_name(
-            self._address_space, name)
+        return self._cdata_mem_map_cache.find_cdata_by_name(self._mem, name)
 
     def map_cdata(
         self, cdata_type_name: str, cdata_name: str, address: int
@@ -105,32 +108,32 @@ class CDataMemMapper:
 
         mem_region = list(filter(
             lambda m: m.base_address <= address < m.end_address,
-            self._address_space))
+            self._mem.regions))
 
         if not mem_region:
             raise CDataMemMapError(
-                f'Address {address:#x} not mapped in address space '
-                f'{self._address_space}.')
+                f'Address {address:#x} not mapped in memory "{self._mem}"')
 
-        mem_region = cast(MemoryRegion, mem_region[0])
-
-        if not mem_region.host_mem_area:
-            raise CDataMemMapError(
-                f'Raw memory map is not accessible for {address:#x}.')
+        mem_region = mem_region[0]
 
         if (address + ctypes.sizeof(cdata_type)) - 1 > mem_region.end_address:
             raise CDataMemMapError(
                 f'C data binding at "{address}" error, overflow memory region '
                 f'{mem_region.base_address:#x}-{mem_region.end_address:#x}.')
 
-        cdata = cdata_type.from_address(
-            mem_region.host_base_address + (address - mem_region.base_address))
+        if mem_region.host_mem is None:
+            sync_ctype = mem_sync_ctypes_factory(self._mem, address, cdata_type)
+            cdata = sync_ctype()
+        else:
+            cdata_offset = address - mem_region.base_address
+            addr_translation = mem_region.host_base_address + cdata_offset
+            cdata = cdata_type.from_address(addr_translation)
 
         if isinstance(cdata, DataPointerBase):
-            cdata.address_space = self._address_space
+            cdata.mem = self._mem
 
         map_entry = CDataMemMapEntry(address, cdata, cdata_name)
-        self._cdata_mem_map_cache.store_cdata(self._address_space, map_entry)
+        self._cdata_mem_map_cache.store_cdata(self._mem, map_entry)
         return cdata
 
     def map_cdata_from_file(self, filename: str):

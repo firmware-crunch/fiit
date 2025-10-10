@@ -23,64 +23,32 @@ import struct
 import ctypes
 from typing import Type, cast, List, Dict, Union
 
-from unicorn import Uc
-from unicorn.unicorn_const import UC_MODE_BIG_ENDIAN
-from unicorn.arm_const import (
-    UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3, UC_ARM_REG_R4,
-    UC_ARM_REG_R5, UC_ARM_REG_R6, UC_ARM_REG_R7, UC_ARM_REG_R8, UC_ARM_REG_R9,
-    UC_ARM_REG_R10, UC_ARM_REG_FP, UC_ARM_REG_IP, UC_ARM_REG_SP, UC_ARM_REG_LR,
-    UC_ARM_REG_PC, UC_ARM_REG_CPSR,
-    UC_ARM_REG_S0, UC_ARM_REG_S1, UC_ARM_REG_S2, UC_ARM_REG_S3, UC_ARM_REG_S4,
-    UC_ARM_REG_S5, UC_ARM_REG_S6, UC_ARM_REG_S7, UC_ARM_REG_S8, UC_ARM_REG_S9,
-    UC_ARM_REG_S10, UC_ARM_REG_S11, UC_ARM_REG_S12, UC_ARM_REG_S13,
-    UC_ARM_REG_S14, UC_ARM_REG_S15,
-    UC_ARM_REG_D0, UC_ARM_REG_D1, UC_ARM_REG_D2, UC_ARM_REG_D3, UC_ARM_REG_D4,
-    UC_ARM_REG_D5, UC_ARM_REG_D6, UC_ARM_REG_D7
-)
-
-from ..emu.arch_unicorn import ArchUnicorn
-from ..arch_ctypes import configure_ctypes
-from ..arch_ctypes.base_types import (
+from fiit.machine import DeviceCpu
+from fiit.arch_ctypes import configure_ctypes
+from fiit.arch_ctypes.arch_arm import Fp16
+from fiit.arch_ctypes.base_types import (
     CBaseType, FunctionSpec, Struct, Float, Double, IntegralType,
     FundBaseType, ArgSpec
 )
-from ..arch_ctypes.arch_arm import Fp16
+
 from .cc_base import CallingConvention, CpuContext, FuncArg, ReturnValue
 
 
 class CallingConventionARM(CallingConvention):
     NAME = 'aapcs32'
-    REGS = {
-        'r0': UC_ARM_REG_R0, 'r1': UC_ARM_REG_R1, 'r2': UC_ARM_REG_R2,
-        'r3': UC_ARM_REG_R3, 'r4': UC_ARM_REG_R4, 'r5': UC_ARM_REG_R5,
-        'r6': UC_ARM_REG_R6, 'r7': UC_ARM_REG_R7, 'r8': UC_ARM_REG_R8,
-        'r9': UC_ARM_REG_R9, 'r10': UC_ARM_REG_R10, 'r11': UC_ARM_REG_FP,
-        'r12': UC_ARM_REG_IP, 'sp': UC_ARM_REG_SP, 'lr': UC_ARM_REG_LR,
-        'pc': UC_ARM_REG_PC, 'cpsr': UC_ARM_REG_CPSR,
-
-        'S0': UC_ARM_REG_S0, 'S1': UC_ARM_REG_S1, 'S2': UC_ARM_REG_S2,
-        'S3': UC_ARM_REG_S3, 'S4': UC_ARM_REG_S4, 'S5': UC_ARM_REG_S5,
-        'S6': UC_ARM_REG_S6, 'S7': UC_ARM_REG_S7, 'S8': UC_ARM_REG_S8,
-        'S9': UC_ARM_REG_S9, 'S10': UC_ARM_REG_S10, 'S11': UC_ARM_REG_S11,
-        'S12': UC_ARM_REG_S12, 'S13': UC_ARM_REG_S13, 'S14': UC_ARM_REG_S14,
-        'S15': UC_ARM_REG_S15,
-
-        'D0': UC_ARM_REG_D0, 'D1': UC_ARM_REG_D1, 'D2': UC_ARM_REG_D2,
-        'D3': UC_ARM_REG_D3, 'D4': UC_ARM_REG_D4, 'D5': UC_ARM_REG_D5,
-        'D6': UC_ARM_REG_D6, 'D7': UC_ARM_REG_D7
-    }
 
     def __init__(
         self,
-        uc: Uc,
+        cpu: DeviceCpu,
         ctypes_options: Dict[str, str] = None,
         hard_fp: bool = False
     ):
-        self._uc = uc
+        self.cpu = cpu
+        self.mem = cpu.mem
+        self.regs = cpu.regs
 
-        self._is_big_endian = uc._mode & UC_MODE_BIG_ENDIAN
-        self._type_code_int32_str = '>I' if self._is_big_endian else '<I'
-        self._type_code_int64 = '>Q' if self._is_big_endian else '<Q'
+        self._type_code_int32_str = '>I' if self.cpu.is_big_endian() else '<I'
+        self._type_code_int64 = '>Q' if self.cpu.is_big_endian() else '<Q'
 
         self._hard_fp = hard_fp
 
@@ -93,37 +61,33 @@ class CallingConventionARM(CallingConvention):
         ########################################################################
         # C Types
         ########################################################################
-        configure_ctypes(
-            ArchUnicorn.get_generic_arch_str_by_uc(uc),
-            [globals()],
-            ctypes_options)
+        arch_str = (f'{self.cpu.ARCH_NAME}'
+                    f':{self.cpu.endian.label_hc_lc}'
+                    f':{self.cpu.bits.value}')
+        configure_ctypes(arch_str, [globals()], ctypes_options)
 
     def _read_reg(self, reg: str) -> bytes:
-        return struct.pack(self._type_code_int32_str,
-                           self._uc.reg_read(self.REGS[reg]))
+        return struct.pack(self._type_code_int32_str, self.regs.read(reg))
 
     def _write_reg(self, reg: str, value: bytes):
-        self._uc.reg_write(self.REGS[reg],
-                           struct.unpack(self._type_code_int32_str, value)[0])
+        self.regs.write(reg, struct.unpack(self._type_code_int32_str, value)[0])
 
     def _read_reg_64(self, reg: str) -> bytes:
-        return struct.pack(self._type_code_int64,
-                           self._uc.reg_read(self.REGS[reg]))
+        return struct.pack(self._type_code_int64, self.regs.read(reg))
 
     def _write_reg_64(self, reg: str, value: bytes):
-        self._uc.reg_write(self.REGS[reg],
-                           struct.unpack(self._type_code_int64, value)[0])
+        self.regs.write(reg, struct.unpack(self._type_code_int64, value)[0])
 
     def get_return_address(self) -> int:
-        return self._uc.reg_read(self.REGS['lr'])
+        return self.regs.lr
 
     def set_pc(self, address: int):
-        self._uc.reg_write(self.REGS['pc'], address)
+        self.regs.arch_pc = address
 
     def get_cpu_context(self) -> CpuContext:
         cpu_context = CpuContext()
-        for str_reg, const_reg in self.REGS.items():
-            setattr(cpu_context, str_reg, self._uc.reg_read(const_reg))
+        for reg_name in self.regs.register_names:
+            setattr(cpu_context, reg_name, self.regs.read(reg_name))
         return cpu_context
 
     def _is_aggregate_vfp_cprc(self, aggregate: Type[Struct]) \
@@ -168,7 +132,7 @@ class CallingConventionARM(CallingConvention):
                     if j in self._vfp_s_alloc:
                         break
                     alloc_regs.append(j)
-                    format_regs.append(f'S{j}')
+                    format_regs.append(f's{j}')
                 elif base_type == Double:
                     sreg_part1 = j * 2
                     sreg_part2 = sreg_part1 + 1
@@ -176,7 +140,7 @@ class CallingConventionARM(CallingConvention):
                             or sreg_part2 in self._vfp_s_alloc):
                         break
                     alloc_regs.extend((sreg_part1, sreg_part2))
-                    format_regs.append(f'D{j}')
+                    format_regs.append(f'd{j}')
 
             if len(format_regs) == slot_count:
                 for reg_id in alloc_regs:
@@ -190,7 +154,7 @@ class CallingConventionARM(CallingConvention):
         if self._hard_fp and not spec.is_variadic:      # A.2.vfp
             self._vfp_s_alloc = []
 
-        self._sp = self._uc.reg_read(self.REGS['sp'])
+        self._sp = self.regs.arch_sp
         self._nsaa = self._sp                           # A.3
 
         # A.4: Only if composite type higher than 4 bytes. (6.4 Result Return)
@@ -227,7 +191,7 @@ class CallingConventionARM(CallingConvention):
         else:
             self._nsaa = ((self._nsaa + 3) // 4) * 4
 
-        value = self._uc.mem_read(self._nsaa, word_size * 4)               # C.8
+        value = self.mem.read(self._nsaa, word_size * 4)                   # C.8
         self._nsaa += type_size
         return bytes(value)
 
@@ -241,9 +205,9 @@ class CallingConventionARM(CallingConvention):
                     and (base_type := self._is_vfp_cprc(arg.type))):
                 if regs := self._alloc_vfp_regs(base_type, arg.size):  # C.1.vfp
                     for reg_str in regs:
-                        if reg_str.startswith('S'):
+                        if reg_str.startswith('s'):
                             values.append(self._read_reg(reg_str))
-                        elif reg_str.startswith('D'):
+                        elif reg_str.startswith('d'):
                             values.append(self._read_reg_64(reg_str))
                 else:                                                  # C.2.vfp
                     values.append(self._read_stack_arg(
@@ -264,8 +228,7 @@ class CallingConventionARM(CallingConvention):
                             self._ncrn += 1
                         else:
                             values.append(
-                                self._uc.mem_read(self._nsaa,
-                                                  (arg.word_size-i)*4))
+                                self.mem.read(self._nsaa, (arg.word_size-i)*4))
                             break
                 else:   # C.7 , C.8
                     values.append(
@@ -276,7 +239,7 @@ class CallingConventionARM(CallingConvention):
                     and self._nsaa != self._sp)):                      # see B.2
                 value = arg.type.from_buffer_copy(b''.join(values)[:arg.size])
             else:
-                if self._is_big_endian and issubclass(arg.type, FundBaseType):
+                if self.cpu.is_big_endian() and issubclass(arg.type, FundBaseType):
                     bytes_value = b''.join(values)[-arg.size:]
                 else:
                     bytes_value = b''.join(values)[:arg.size]
@@ -293,26 +256,26 @@ class CallingConventionARM(CallingConvention):
             self._nsaa = ((self._nsaa + 3) // 4) * 4
 
         if value:
-            if (arg_type.size < 4 and self._is_big_endian
+            if (arg_type.size < 4 and self.cpu.is_big_endian()
                     and not issubclass(arg_type.type, Fp16)):
                 addr_to_w = self._nsaa + (4 - arg_type.size)
             else:
                 addr_to_w = self._nsaa
 
-            self._uc.mem_write(addr_to_w, value)                           # C.8
+            self.mem.write(addr_to_w, value)                               # C.8
 
         self._nsaa += arg_type.size
 
     def _fp16_pad(self, fp16: bytes) -> bytes:
         # Todo factoring with _pad()
-        if self._is_big_endian:
+        if self.cpu.is_big_endian():
             return b'\x00\x00' + fp16
         else:
             return fp16 + b'\x00\x00'
 
     def _pad(self, value: bytes, value_type: Type[CBaseType]) -> bytes:
         pad = b'\x00' * (4 - len(value))
-        if not self._is_big_endian or issubclass(value_type, Struct):
+        if not self.cpu.is_big_endian() or issubclass(value_type, Struct):
             return value + pad
         else:
             return pad + value
@@ -331,11 +294,11 @@ class CallingConventionARM(CallingConvention):
                         for i, reg_str in enumerate(regs):
                             offset = base_type_size*i
                             v_part = raw_value[offset:offset+base_type_size]
-                            if reg_str.startswith('S'):
+                            if reg_str.startswith('s'):
                                 if issubclass(base_type, Fp16):
                                     v_part = self._fp16_pad(v_part)
                                 self._write_reg(reg_str,  v_part)
-                            elif reg_str.startswith('D'):
+                            elif reg_str.startswith('d'):
                                 self._write_reg_64(reg_str, v_part)
                 else:                                                  # C.2.vfp
                     self._write_stack_arg(arg, raw_value)
@@ -373,7 +336,7 @@ class CallingConventionARM(CallingConvention):
                             self._ncrn += 1
                         else:
                             if raw_value:
-                                self._uc.mem_write(self._nsaa, raw_value[4*i:])
+                                self.mem.write(self._nsaa, raw_value[4*i:])
                             self._nsaa += 4 * (arg.word_size - i)
                             break
 
@@ -396,10 +359,13 @@ class CallingConventionARM(CallingConvention):
         self._stage_b(spec)
         self._stage_c_write(spec, arg_values)
 
-    def call(self, spec: FunctionSpec, arg_values: Dict[int, CBaseType]) \
-            -> Union[CBaseType, None]:
-        """ experimental """
-        context = self._uc.context_save()
+    def call(
+        self, spec: FunctionSpec, arg_values: Dict[int, CBaseType]
+    ) -> Union[CBaseType, None]:
+        if self.cpu.backend_name == 'unicorn':
+            # fix for issue unicorn-engine/unicorn#1487
+            # TODO: remove this workaround in future unicorn upgrade
+            uc_context = self.cpu.backend.context_save()
 
         # Get needed stack space
         self._stage_a(spec)
@@ -407,13 +373,13 @@ class CallingConventionARM(CallingConvention):
         nsaa = self._stage_c_write(spec, {})
 
         # Set stack space for function arguments
-        sp = self._uc.reg_read(UC_ARM_REG_SP)
+        sp = self.regs.arch_sp
 
         new_stack = (sp - (nsaa - sp))
         if new_stack % 8 != 0:
             new_stack -= 8 - (new_stack % 8)
 
-        self._uc.reg_write(UC_ARM_REG_SP, new_stack)
+        self.regs.arch_sp = new_stack
 
         # Write function arguments
         self._stage_a(spec)
@@ -421,23 +387,22 @@ class CallingConventionARM(CallingConvention):
         self._stage_c_write(spec, arg_values)
 
         # Subroutine call
-        pc = self._uc.reg_read(UC_ARM_REG_PC)
-        cpsr_t = (self._uc.reg_read(UC_ARM_REG_CPSR) >> 5) & 1
-        self._uc.reg_write(UC_ARM_REG_LR, pc | cpsr_t)
-        self._uc.reg_write(UC_ARM_REG_PC, spec.address)
+        pc = self.regs.arch_pc
+        cpsr_t = (self.regs.cpsr >> 5) & 1
+        self.regs.lr = pc | cpsr_t
+        self.regs.arch_pc = spec.address
 
-        # Evict current block from qemu cache to catch function return address
-        # in the nested emulation
-        self._uc.ctl_remove_cache(pc, pc + 4)
-
-        self._uc.emu_start(spec.address, pc)
+        self.cpu.start(spec.address, pc)
 
         if ret_value := self.get_return_value(spec):
             ret = ret_value.value
         else:
             ret = None
 
-        self._uc.context_restore(context)
+        if self.cpu.backend_name == 'unicorn':
+            # fix for issue unicorn-engine/unicorn#1487
+            # TODO: remove this workaround in future unicorn upgrade
+            self.cpu.backend.context_restore(uc_context)
 
         return ret
 
@@ -455,10 +420,10 @@ class CallingConventionARM(CallingConvention):
             values = []
             for i in range(0, nb_slots):
                 if base_type == Double:
-                    v_part = self._read_reg_64(f'D{i}')
+                    v_part = self._read_reg_64(f'd{i}')
                 else:
-                    v_part = self._read_reg(f'S{i}')
-                    if self._is_big_endian:  # FPp16
+                    v_part = self._read_reg(f's{i}')
+                    if self.cpu.is_big_endian():  # FPp16
                         v_part = v_part[-base_type_size:]
                     else:
                         v_part = v_part[:base_type_size]
@@ -466,7 +431,7 @@ class CallingConventionARM(CallingConvention):
             value = b''.join(values)
         elif issubclass(spec.return_value_type, FundBaseType) and type_size <= 4:
             value = self._read_reg('r0')
-            if self._is_big_endian:
+            if self.cpu.is_big_endian():
                 value = value[-type_size:]
         elif issubclass(spec.return_value_type, FundBaseType) and type_size == 8:
             value = b''.join([self._read_reg('r0'), self._read_reg('r1')])
@@ -491,17 +456,17 @@ class CallingConventionARM(CallingConvention):
                 offset = base_type_size * i
                 v_part = raw_value[offset:offset+base_type_size]
                 if base_type == Double:
-                    self._write_reg_64(f'D{i}', v_part)
+                    self._write_reg_64(f'd{i}', v_part)
                 else:
                     if issubclass(base_type, Fp16):
                         v_part = self._fp16_pad(v_part)
-                    self._write_reg(f'S{i}', v_part)
+                    self._write_reg(f's{i}', v_part)
         elif issubclass(spec.return_value_type, FundBaseType) and type_size <= 4:
             if issubclass(spec.return_value_type, Fp16):
                 to_w = self._fp16_pad(raw_value)
             else:
                 pad = b'\x00' * (4 - len(raw_value))
-                if self._is_big_endian:
+                if self.cpu.is_big_endian():
                     to_w = pad + raw_value
                 else:
                     to_w = raw_value + pad

@@ -51,7 +51,7 @@ class SynchronizedZmqTerminal(ZMQTerminalInteractiveShell):
     """
     include_other_output = True
 
-    ECHO_FILTER = ['%emu_start', '%es', '%step', '%s', '%cont', '%c']
+    ECHO_FILTER = ['%cpu_exec', '%ce', '%cont', '%c']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -282,7 +282,6 @@ def fiit_jupyter_from_backend(
 ) -> None:
     zmq_context = zmq.Context()
     sock = zmq_context.socket(zmq.REQ)
-    print(f'tcp://{backend_ip}:{backend_port}')
     sock.connect(f'tcp://{backend_ip}:{backend_port}')
     req = BackendRequest(method=BACKEND_REQ_GET_BACKEND_DATA, id=uuid.uuid1().hex)
     sock.send_json(dataclasses.asdict(req))

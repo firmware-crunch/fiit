@@ -19,21 +19,35 @@
 #
 ################################################################################
 
-from typing import Any, Dict
+__all__ = [
+    'PluginDebugger'
+]
 
-from fiit.dbg.debugger import Debugger
-from fiit.shell.front_dbg import DbgFrontend
-from fiit.plugin import FiitPlugin, FiitPluginContext
+from typing import List, cast, Any, Dict
 
-from . import CTX_UNICORN_UC, CTX_SHELL, CTX_DBG
+from fiit.machine import Machine
+from fiit.dbg import DebuggerFactory, Debugger
+from fiit.plugin import FiitPluginContext, FiitPlugin
+
+from . import CTX_REQ_MACHINE, CTX_MACHINE, CTX_DBG
+
+# ==============================================================================
 
 
 class PluginDebugger(FiitPlugin):
     NAME = 'plugin_debugger'
-    REQUIREMENTS = [CTX_UNICORN_UC.as_require()]
-    OPTIONAL_REQUIREMENTS = [CTX_SHELL.as_require()]
+    REQUIREMENTS = [CTX_REQ_MACHINE]
     OBJECTS_PROVIDED = [CTX_DBG]
-    CONFIG_SCHEMA = {NAME: {'type': 'dict'}}
+    CONFIG_SCHEMA = {
+        NAME: {
+            'type': 'dict',
+            'keysrules': {'type': 'string'},
+            'valuesrules': {
+                'type': 'dict',
+                'schema': {}
+            }
+        }
+    }
 
     def plugin_load(
         self,
@@ -42,9 +56,13 @@ class PluginDebugger(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ):
-        dbg = Debugger(requirements[CTX_UNICORN_UC.name])
+        dbg_list: List[Debugger] = []
+        machine = cast(Machine, requirements[CTX_MACHINE.name])
 
-        if shell := optional_requirements.get(CTX_SHELL.name):
-            DbgFrontend(dbg, shell)
+        for cpu_name, config in plugin_config.items():
+            cpu = machine.get_device_cpu(cpu_name)
+            dbg = DebuggerFactory.get(cpu)
+            dbg_list.append(dbg)
+            self.log.info(f'Attach new debugger instance to dev@{cpu.dev_name}')
 
-        plugins_context.add(CTX_DBG.name, dbg)
+        plugins_context.add(CTX_DBG.name, dbg_list)

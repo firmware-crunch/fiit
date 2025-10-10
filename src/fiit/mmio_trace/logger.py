@@ -19,12 +19,12 @@
 #
 ################################################################################
 
-from typing import List, Tuple, cast
+from typing import List, Tuple
 import logging
 
-from cmsis_svd.model import SVDRegister, SVDField, SVDEnumeratedValue
+from cmsis_svd.model import SVDRegister, SVDField
 
-from ..emu import ADDRESS_FORMAT
+from fiit.machine import Memory, DeviceCpu
 
 from .reg_helper import get_field
 from .interceptor import MonitoredMemory
@@ -42,8 +42,8 @@ class MmioLogger:
         self._log_show_field_states = log_show_field_states
 
         reg_bit_size = mem_bit_size
-        self._mmio_addr_f = ADDRESS_FORMAT[reg_bit_size]
-        self._mem_addr_f = ADDRESS_FORMAT[reg_bit_size]
+        self._mmio_addr_f = Memory.get_addr_fmt(reg_bit_size)
+        self._mem_addr_f = Memory.get_addr_fmt(reg_bit_size)
         self._monitored_memory = monitored_memory
 
     def _format_mem_area_name(self, address: int) -> str:
@@ -88,14 +88,17 @@ class MmioLogger:
             state_name = ''
             state_desc = ''
 
-            for enum_val in cast(SVDField, field).enumerated_values:
-                enum_val = cast(SVDEnumeratedValue, enum_val)
-                if enum_val.value == field_state:
-                    state_name = enum_val.name
-                    state_desc = enum_val.description
+            if (isinstance(field, SVDField)
+                    and field.enumerated_values is not None):
+                for enum_values in field.enumerated_values:
+                    for enum_val in enum_values.enumerated_values:
+                        if enum_val.value == field_state:
+                            state_name = enum_val.name
+                            state_desc = enum_val.description
 
             field_states_info.append(
-                (field, field_state, state_name, state_desc))
+                (field, field_state, state_name, state_desc)
+            )
 
         return field_states_info
 
@@ -187,4 +190,3 @@ class MmioLogger:
     ):
         self._py_log.info(self.format_svd_write_access(
             address, pc, state, new_state, reg))
-

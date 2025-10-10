@@ -19,7 +19,7 @@
 #
 ################################################################################
 
-from fiit.dbg.dis_capstone import DisassemblerCapstone
+from fiit.dbg.disasm import DisassemblerCapstone
 
 from .fixtures.blobs import BlobArmEl32IncLoop
 from .fixtures.fixture_utils import get_file_content

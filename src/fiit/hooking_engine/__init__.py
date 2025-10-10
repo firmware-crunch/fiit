@@ -22,5 +22,6 @@
 from .engine import HookingEngine
 from .engine_types import (
     FuncHookMeta, HookingContext, FUNC_HOOK_META_TAG, HookHandler,
-    InterceptorPreHookConfig, InterceptorPostHookConfig, InterceptorHookEntry
+    InterceptorPreHookConfig, InterceptorPostHookConfig, InterceptorHookEntry,
+    HookingEngineException
 )

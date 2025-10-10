@@ -19,13 +19,19 @@
 #
 ################################################################################
 
+__all__ = [
+    'PluginLogger'
+]
+
 from typing import Dict, Any
 
 from fiit.logger import FiitLogger
 from fiit.plugin import FiitPlugin, FiitPluginContext
 
+# ==============================================================================
 
-class PluginEmulatorLogger(FiitPlugin):
+
+class PluginLogger(FiitPlugin):
     NAME = 'plugin_logger'
     CONFIG_SCHEMA = {
         NAME: {

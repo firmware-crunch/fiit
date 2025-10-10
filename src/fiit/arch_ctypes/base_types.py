@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from typing import (
     Type, cast,  Any, Literal, List, Dict, Union, Tuple, Optional)
 
-from ..emu.emu_types import AddressSpace, MemoryRegion
+from ..machine import Memory
 
 
 ################################################################################
@@ -74,6 +74,70 @@ class CBaseType(ctypes.Structure):
 
 
 ################################################################################
+# Memory Synchronizer Mixin
+###############################################################################
+
+def mem_sync_ctypes_factory(
+    mem: Memory, addr: int, ctype: Type[CBaseType]
+) -> Type[CBaseType]:
+    """
+    This factory provide ctype `CBaseType` host/target memory synchronisation
+    via the MemSyncMixin mixin.
+    """
+    _mem = mem
+    _addr = addr
+    _size = ctypes.sizeof(ctype)
+    _fields = [field_entry[0] for field_entry in ctype._fields_]
+
+    class MemSyncMixin(CBaseType):
+        """
+        This mixin is used to synchronise the host memory of a ctypes instance
+        of `CBaseType` with the memory of a target in both way. This mixin is
+        useful when the emulator or machine memory is not exposed directly in
+        the host memory where lives the Python ctypes instance.
+
+        When a ctypes value is read, the mixin catch the access before read and
+        update the host memory with the memory content of the target.
+
+        When a ctypes value is write, the mixin catch the access after write and
+        update the memory of the target with the memory content of the host.
+
+        This mixin is parametrized due to a Python ctypes implementation
+        constraint. Only `__getattribute__` is called for ctypes structure field
+        resolution (`__getattr__` is not used). Therefore, to intercept
+        ctypes structure field access in a `CBaseType`, `__getattribute__` is
+        overridden, but does not access to instance attribute to avoid endless
+        recursion due to recursive call to `__getattribute__`, instead the
+        parametrized variables of the closure are used to access `CBaseType`
+        characteristics and metadata.
+        """
+
+        def __getattribute__(self, name: str) -> Any:
+            if name in _fields:
+                buffer = (ctypes.c_ubyte * _size)()
+                buffer[:_size] = _mem.read(_addr, _size)
+                ctypes.memmove(
+                    ctypes.addressof(self), ctypes.addressof(buffer), _size
+                )
+
+            return super().__getattribute__(name)
+
+        def __setattr__(self, name: str, value: Any) -> Any:
+            ret = super().__setattr__(name, value)
+
+            if name in _fields:
+                _mem.write(
+                    _addr, ctypes.string_at(ctypes.addressof(self), _size)
+                )
+
+            return ret
+
+    synchronized_ctype = type(ctype.__name__, (ctype, MemSyncMixin), {})
+    synchronized_ctype = cast(Type[CBaseType], synchronized_ctype)
+    return synchronized_ctype
+
+
+################################################################################
 #  Type categorisation
 ################################################################################
 
@@ -88,7 +152,7 @@ class FundBaseType(CBaseType):
 
 
 class DataPointerBase(FundBaseType):
-    type: CBaseType
+    type: Type[CBaseType]
 
     @classmethod
     def new_type(cls, ctype: Type[CBaseType]) -> Type['DataPointerBase']:
@@ -100,21 +164,24 @@ class DataPointerBase(FundBaseType):
     def new(
         cls,
         ctypes_instance: CBaseType,
-        target_address: int = 0,
-        address_space: AddressSpace = None
+        target_address: Optional[int] = None,
+        memory: Memory = None
     ) -> 'DataPointerBase':
-        new_ptr = cls.new_type(type(ctypes_instance))(target_address, address_space)
+        new_ptr = cls.new_type(type(ctypes_instance))(target_address, memory)
         new_ptr.target_backed_address = ctypes.addressof(ctypes_instance)
         return new_ptr
 
     def __init__(
-        self, target_address: int = 0, address_space: AddressSpace = None
+        self,
+        target_address: Optional[int] = None,
+        memory: Optional[Memory] = None
     ):
         FundBaseType.__init__(self)
         # target_address is the ctypes container of the pointer value
-        self.target_address = target_address
+        if target_address is not None:
+            self.target_address = target_address
         self.target_backed_address: Optional[int] = None
-        self.address_space: Union[AddressSpace, None] = address_space
+        self.mem: Union[Memory, None] = memory
 
     def is_null(self) -> bool:
         if self.target_address == 0:
@@ -123,33 +190,43 @@ class DataPointerBase(FundBaseType):
 
     @property
     def contents(self) -> Any:
-        if self.address_space is not None:
+        if self.mem is not None:
             mem_region = list(filter(
                 lambda m: m.base_address <= self.target_address < m.end_address,
-                self.address_space))
+                self.mem.regions))
 
             if not mem_region:
                 raise ValueError(f'Target address {self.target_address:#x} not '
-                                 f'found in address space.')
+                                 f'mapped in memory')
 
-            mem_region = cast(MemoryRegion, mem_region[0])
+            mem_region = mem_region[0]
 
-            #  Address translation to host memory map
-            mapping_target_backed_address = \
-                mem_region.host_base_address \
-                + (self.target_address - mem_region.base_address)
+            if mem_region.host_mem is None:
+                sync_ctype = mem_sync_ctypes_factory(
+                    self.mem, self.target_address, self.type
+                )
+                cdata = sync_ctype()
+            else:
+                cdata_offset = self.target_address - mem_region.base_address
+                addr_translation = mem_region.host_base_address + cdata_offset
+                cdata = self.type.from_address(addr_translation)
 
-            return self.type.from_address(mapping_target_backed_address)
+            return cdata
 
         elif self.target_backed_address:  # for non host mapped C data type
             return self.type.from_address(self.target_backed_address)
 
-        raise ValueError('Pointer not backed by any address space')
+        raise ValueError('Pointer not backed by any memory')
 
     @property
     def raw_contents(self) -> bytes:
-        return ctypes.string_at(self.target_backed_address,
-                                ctypes.sizeof(self.type))
+        if self.mem is not None:
+            return self.mem.read(self.target_address, ctypes.sizeof(self.type))
+        elif self.target_backed_address is not None:
+            return ctypes.string_at(self.target_backed_address,
+                                    ctypes.sizeof(self.type))
+
+        raise ValueError('Pointer not backed by any memory')
 
     def __eq__(self, other: Any) -> bool:
         if self.target_address != other.target_address:

@@ -19,85 +19,53 @@
 #
 ################################################################################
 
-from typing import Optional, Callable, List
+__all__ = [
+    'create_uc_arm',
+    'create_uc_arm_926',
+    'create_uc_arm_1176',
+    'create_uc_arm_cortex'
+]
 
 import unicorn
-from unicorn.unicorn_const import (
-    UC_ARCH_ARM, UC_MODE_THUMB, UC_MODE_ARM, UC_ARCH_ARM64, UC_MODE_ARM926,
-    UC_MODE_ARM1176,
-    UC_MODE_LITTLE_ENDIAN, UC_MODE_BIG_ENDIAN,
-    UC_PROT_READ, UC_PROT_WRITE, UC_PROT_EXEC, UC_HOOK_CODE)
-from unicorn.arm_const import UC_ARM_REG_FPEXC
-
-from .blobs.meta_bin_blob import MetaBinBlob
+from unicorn import unicorn_const
 
 
-class BinBlob2Emulator:
-    ARCH = {
-        'arm:el:32:default': (
-            UC_ARCH_ARM, UC_MODE_ARM | UC_MODE_THUMB | UC_MODE_LITTLE_ENDIAN),
-        'arm:el:32:926': (
-            UC_ARCH_ARM,
-            UC_MODE_ARM | UC_MODE_THUMB | UC_MODE_LITTLE_ENDIAN | UC_MODE_ARM926),
-        'arm:eb:32:926': (
-            UC_ARCH_ARM,
-            UC_MODE_ARM | UC_MODE_THUMB | UC_MODE_BIG_ENDIAN | UC_MODE_ARM926),
-        'arm:el:32:1176': (
-            UC_ARCH_ARM,
-            UC_MODE_ARM | UC_MODE_THUMB | UC_MODE_LITTLE_ENDIAN | UC_MODE_ARM1176),
-        'arm:eb:32:1176': (
-            UC_ARCH_ARM,
-            UC_MODE_ARM | UC_MODE_THUMB | UC_MODE_BIG_ENDIAN | UC_MODE_ARM1176),
-        'arm:eb:32:default': (
-            UC_ARCH_ARM,
-            UC_MODE_ARM | UC_MODE_THUMB | UC_MODE_BIG_ENDIAN),
-        'arm:el:64:default': (
-            UC_ARCH_ARM64, UC_MODE_ARM | UC_MODE_LITTLE_ENDIAN)
-    }
+# ------------------------------------------------------------------------------
 
-    def __init__(
-        self, bin_blob: MetaBinBlob, arch_extra: Optional[dict] = None
-    ):
-        self.bin_blob = bin_blob
-        self.uc = unicorn.Uc(*self.ARCH[bin_blob.arch_unicorn])
-
-        for mm in bin_blob.mem_map:
-            self.uc.mem_map(mm['base_address'], mm['size'],
-                            UC_PROT_READ | UC_PROT_WRITE | UC_PROT_EXEC)
-
-        for load_blob in bin_blob.mapped_blobs:
-            self.uc.mem_write(load_blob['loading_address'], load_blob['blob'])
-
-        if (bin_blob.arch_unicorn.startswith(('arm:el:32', 'arm:eb:32'))
-                and arch_extra
-                and arch_extra.get('cpu_float_flag') == 'FLOAT_HARD'):
-            self.uc.reg_write(UC_ARM_REG_FPEXC, 0x40000000)
-            print('[i] Configuring UC for ARM hard float code.')
-
-    def start(self):
-        self.uc.emu_start(self.bin_blob.emu_start, self.bin_blob.emu_end)
+def create_uc_arm() -> unicorn.Uc:
+    unicorn_mode = (
+        unicorn_const.UC_MODE_LITTLE_ENDIAN | unicorn_const.UC_MODE_THUMB
+    )
+    uc = unicorn.Uc(unicorn_const.UC_ARCH_ARM, unicorn_mode)
+    return uc
 
 
-class InstructionTracer:
-    def __init__(self, uc: unicorn.Uc):
-        self.records = []
-        uc.hook_add(UC_HOOK_CODE, self.tracer, begin=1, end=0)
+def create_uc_arm_926() -> unicorn.Uc:
+    unicorn_mode = (
+        unicorn_const.UC_MODE_LITTLE_ENDIAN
+        | unicorn_const.UC_MODE_THUMB
+        | unicorn_const.UC_MODE_ARM926
+    )
+    uc = unicorn.Uc(unicorn_const.UC_ARCH_ARM, unicorn_mode)
+    return uc
 
-    def tracer(self, uc: unicorn.Uc, address: int, size: int, data: dict):
-        self.records.append(address)
+
+def create_uc_arm_1176() -> unicorn.Uc:
+    unicorn_mode = (
+        unicorn_const.UC_MODE_LITTLE_ENDIAN
+        | unicorn_const.UC_MODE_THUMB
+        | unicorn_const.UC_MODE_ARM1176
+    )
+    uc = unicorn.Uc(unicorn_const.UC_ARCH_ARM, unicorn_mode)
+    return uc
 
 
-class CodeBreakpoint:
-    def __init__(
-        self, uc: unicorn.Uc, code_tracer_callback: Callable,
-        code_tracer_breaks: List[int]
-    ):
-        self.break_count = 0
-        self.code_tracer_breaks = code_tracer_breaks
-        self._code_tracer_callback = code_tracer_callback
-        uc.hook_add(UC_HOOK_CODE, self.tracer, begin=1, end=0)
+def create_uc_arm_cortex() -> unicorn.Uc:
+    unicorn_mode = (
+        unicorn_const.UC_MODE_LITTLE_ENDIAN
+        | unicorn_const.UC_MODE_THUMB
+        | unicorn_const.UC_MODE_MCLASS
+    )
+    uc = unicorn.Uc(unicorn_const.UC_ARCH_ARM, unicorn_mode)
+    return uc
 
-    def tracer(self, uc: unicorn.Uc, address: int, size: int, data: dict):
-        if address in self.code_tracer_breaks:
-            self.break_count += 1
-            self._code_tracer_callback(uc, address)

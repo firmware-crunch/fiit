@@ -19,24 +19,30 @@
 #
 ################################################################################
 
-from typing import List, Literal, Type
+from typing import List, Literal
 import logging
 
 import pytest
 from unittest.mock import patch
 
-from unicorn.arm_const import UC_ARM_REG_R2
-
-from .fixtures.unicorn_utils import BinBlob2Emulator
-from .fixtures.blobs.meta_bin_blob import MetaBinBlob
+from .fixtures import Blob2Cpu, MetaBinBlob
 from .fixtures.blobs import (
-    BlobArmEl32IncLoop, BlobArmEl32ReadWriteLoop, BlobArmEl32MultiBlock,
-    BlobArmEl64Demo)
+    BlobArmEl32IncLoop,
+    BlobArmEl32ReadWriteLoop,
+    BlobArmEl32MultiBlock
+)
 
-from fiit.dbg.debugger import (
-    Debugger, DBG_EVENT_BREAKPOINT, DBG_EVENT_STEP, DBG_EVENT_WATCHPOINT)
 from fiit.shell import Shell
 from fiit.shell.front_dbg import DbgFrontend
+from fiit.dbg import (
+    DebuggerFactory,
+    Debugger,
+    DBG_EVENT_BREAKPOINT,
+    DBG_EVENT_STEP,
+    DBG_EVENT_WATCHPOINT
+)
+
+# ==============================================================================
 
 
 @pytest.fixture(autouse=True)
@@ -54,10 +60,10 @@ def clear_log():
             logger.removeHandler(handler)
 
 
-class BinBlob2Dbg:
-    def __init__(self, bin_blob: Type[MetaBinBlob], **kwargs):
-        self.emu = BinBlob2Emulator(bin_blob)
-        self.dbg = Debugger(self.emu.uc, **kwargs)
+class BinBlob2Dbg(Blob2Cpu):
+    def __init__(self, bin_blob: MetaBinBlob, **kwargs):
+        Blob2Cpu.__init__(self, bin_blob, cpu_name='cpu0')
+        self.dbg = DebuggerFactory.get(self.cpu, **kwargs)
 
 
 def test_disassemble(capsys):
@@ -68,7 +74,7 @@ def test_disassemble(capsys):
         '0x0000000c:\t0a0050e3            \tcmp\tr0, #0xa\n' \
         '0x00000010:\tfcffff1a            \tbne\t#8\n' \
         '0x00000014:\t0110a0e3            \tmov\tr1, #1'
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
+    front = DbgFrontend([BinBlob2Dbg(BlobArmEl32IncLoop).dbg], Shell())
     front.disassemble('0x0 6')
     assert capsys.readouterr().out == out
 
@@ -91,82 +97,37 @@ def test_mem_read(capsys):
         '000000d0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|\n' \
         '000000e0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|\n' \
         '000000f0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|'
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
+    front = DbgFrontend([BinBlob2Dbg(BlobArmEl32IncLoop).dbg], Shell())
     front.mem_read('0x0 256')
     assert capsys.readouterr().out == out
 
 
-def test_mem_read_64(capsys):
-    out = '0000000000000000  e0 03 01 aa 20 f8 40 d3  e0 03 00 aa 00 00 00 00 |.... .@.........|\n' \
-          '0000000000000010  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|\n' \
-          '0000000000000020  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|\n' \
-          '0000000000000030  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 |................|'
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg, Shell())
-    front.mem_read('0x0 64')
-    assert capsys.readouterr().out == out
-
-
 def test_write_word():
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
+    front = DbgFrontend([BinBlob2Dbg(BlobArmEl32IncLoop).dbg], Shell())
     front.mem_write('0x50 word 0xdeadbeef')
-    assert front.dbg.uc.mem_read(0x50, 4) == b'\xef\xbe\xad\xde'
+    assert front.dbg.cpu.mem.read(0x50, 4) == b'\xef\xbe\xad\xde'
 
 
 def test_write_cstring():
     cstring = 'patched_boot_line("/dev/mp0")'
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
+    front = DbgFrontend([BinBlob2Dbg(BlobArmEl32IncLoop).dbg], Shell())
     front.mem_write(f'0x50 cstring {cstring}')
-    assert front.dbg.uc.mem_read(0x50, len(cstring)).decode() == cstring
+    assert front.dbg.cpu.mem.read(0x50, len(cstring)).decode() == cstring
 
 
 def test_register_set():
     expected_value = 0xffeebbcc
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl32MultiBlock).dbg, Shell())
+    front = DbgFrontend([BinBlob2Dbg(BlobArmEl32MultiBlock).dbg], Shell())
     front.register_set(f'r2 {expected_value:#x}')
-    assert front.dbg.uc.reg_read(UC_ARM_REG_R2) == expected_value
+    assert front.dbg.cpu.regs.r2 == expected_value
 
 
-def test_complete_register_get(capsys):
-    out = 'r0   0x00000005   r1   0x00000005   r2   0x00000000   \n' \
-          'r3   0x00000000   r4   0x00000000   r5   0x00000000   \n' \
-          'r6   0x00000000   r7   0x00000000   r8   0x00000000   \n' \
-          'r9   0x00000000   r10  0x00000000   r11  0x00000000   \n' \
-          'r12  0x00000000   sp   0x00000000   lr   0x00000000   \n' \
-          'pc   0x00000050   cpsr 0x600001d3   '
-
-    emu_dbg = BinBlob2Dbg(BlobArmEl32MultiBlock)
-    front = DbgFrontend(emu_dbg.dbg, Shell())
-    emu_dbg.emu.start()
-    front.register_get('')
-    assert capsys.readouterr().out == out
-
-
-def test_complete_register_get_64(capsys):
-    out = 'x0   0x0000000000000000   x1   0x0000000000000000   x2   0x0000000000000000   \n' \
-          'x3   0x0000000000000000   x4   0x0000000000000000   x5   0x0000000000000000   \n' \
-          'x6   0x0000000000000000   x7   0x0000000000000000   x8   0x0000000000000000   \n' \
-          'x9   0x0000000000000000   x10  0x0000000000000000   x11  0x0000000000000000   \n' \
-          'x12  0x0000000000000000   x13  0x0000000000000000   x14  0x0000000000000000   \n' \
-          'x15  0x0000000000000000   x16  0x0000000000000000   x17  0x0000000000000000   \n' \
-          'x18  0x0000000000000000   x19  0x0000000000000000   x20  0x0000000000000000   \n' \
-          'x21  0x0000000000000000   x22  0x0000000000000000   x23  0x0000000000000000   \n' \
-          'x24  0x0000000000000000   x25  0x0000000000000000   x26  0x0000000000000000   \n' \
-          'x27  0x0000000000000000   x28  0x0000000000000000   pc   0x0000000000000008   \n' \
-          'sp   0x0000000000000000   fp   0x0000000000000000   lr   0x0000000000000000   \n' \
-          'cpsr 0x0000000040000000   '
-    emu_dbg = BinBlob2Dbg(BlobArmEl64Demo)
-    front = DbgFrontend(emu_dbg.dbg, Shell())
-    emu_dbg.emu.start()
-    front.register_get('')
-    assert capsys.readouterr().out == out
-
-
-def test_partial_register_get(capsys):
-    out = 'r0   0x00000005   r1   0x00000005   r2   0x00000000   \n' \
-          'pc   0x00000050   cpsr 0x600001d3   '
-    emu_dbg = BinBlob2Dbg(BlobArmEl32MultiBlock)
-    front = DbgFrontend(emu_dbg.dbg, Shell())
-    emu_dbg.emu.start()
+def test_register_get(capsys):
+    out = 'r0    0x00000005   r1    0x00000005   r2    0x00000000   \n' \
+          'pc    0x00000050   cpsr  0x600001d3   '
+    wrap = BinBlob2Dbg(BlobArmEl32MultiBlock)
+    front = DbgFrontend([wrap.dbg], Shell())
+    wrap.start()
     front.register_get('r0 r1 r2 pc cpsr')
     assert capsys.readouterr().out == out
 
@@ -178,24 +139,23 @@ class TestFrontendBreakpointSet:
 
     @pytest.mark.usefixtures('clear_log')
     def test(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
         self.count = 0
-        emu_dbg = BinBlob2Dbg(BlobArmEl32IncLoop,
-                              debug_event_callback=self.callback)
-        front = DbgFrontend(emu_dbg.dbg, Shell())
+        wrap = BinBlob2Dbg(BlobArmEl32IncLoop, event_callback=self.callback)
+        front = DbgFrontend([wrap.dbg], Shell())
 
         # This function is tested
         front.breakpoint_set("0x10 4")
 
-        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
-            emu_dbg.emu.start()
+        with patch("fiit.shell.Shell.wait_for_prompt_suspend"):
+            wrap.start()
 
         assert self.count == 4
         assert caplog.record_tuples == [
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 1'),
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 2'),
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 3'),
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 4')]
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 1'),
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 2'),
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 3'),
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 4')]
 
 
 class TestFrontendBreakpointDel:
@@ -207,23 +167,22 @@ class TestFrontendBreakpointDel:
 
     @pytest.mark.usefixtures('clear_log')
     def test(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
         self.count = 0
-        emu_dbg = BinBlob2Dbg(BlobArmEl32IncLoop,
-                              debug_event_callback=self.callback)
-        self.front = DbgFrontend(emu_dbg.dbg, Shell())
+        wrap = BinBlob2Dbg(BlobArmEl32IncLoop, event_callback=self.callback)
+        self.front = DbgFrontend([wrap.dbg], Shell())
 
         # This function is tested
         self.front.breakpoint_set("0x10 4")
 
-        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
-            emu_dbg.emu.start()
+        with patch("fiit.shell.Shell.wait_for_prompt_suspend"):
+            wrap.start()
 
         assert self.count == 3
         assert caplog.record_tuples == [
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 1'),
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 2'),
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 3')]
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 1'),
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 2'),
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 3')]
 
 
 def test_breakpoint_print(capsys):
@@ -231,19 +190,8 @@ def test_breakpoint_print(capsys):
         '  index  address       hit\n'
         '-------  ----------  -----\n'
         '      1  0x00000010      0\n')
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl32IncLoop).dbg, Shell())
+    front = DbgFrontend([BinBlob2Dbg(BlobArmEl32IncLoop).dbg], Shell())
     front.breakpoint_set('0x10 4')
-    front.breakpoint_print('')
-    assert capsys.readouterr().out == out
-
-
-def test_breakpoint_print_64(capsys):
-    out = (
-        '  index  address               hit\n'
-        '-------  ------------------  -----\n'
-        '      1  0x0000000000000004      0\n')
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg, Shell())
-    front.breakpoint_set('0x4 4')
     front.breakpoint_print('')
     assert capsys.readouterr().out == out
 
@@ -259,98 +207,98 @@ class TestWatchpoint:
         if args['access'] == 'w':
             assert args['pc_address'] == 12
 
-        assert dbg.uc.mem_read(args['address'], args['size']) \
+        assert dbg.cpu.mem.read(args['address'], args['size']) \
                == b'\x00\x00\xa0\xe1'
 
     def _test_area(self, access: Literal['r', 'w', 'rw'], hit: int,
                    expected_access: List[str]):
-        emu_dbg = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
-                              debug_event_callback=self.callback)
-        front = DbgFrontend(emu_dbg.dbg, Shell())
+        wrap = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
+                           event_callback=self.callback)
+        front = DbgFrontend([wrap.dbg], Shell())
 
         # This function is tested
         front.watchpoint_area(f'{access} 0x20 0x24 {int(hit)}')
 
         self.expected_access = expected_access
         self.count = 0
-        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
-            emu_dbg.emu.start()
+        with patch("fiit.shell.Shell.wait_for_prompt_suspend"):
+            wrap.start()
 
         assert self.count == hit
 
     def _test_var(self, access: Literal['r', 'w', 'rw'], hit: int,
                   expected_access: List[str]):
-        emu_dbg = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
-                              debug_event_callback=self.callback)
-        front = DbgFrontend(emu_dbg.dbg, Shell())
+        wrap = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
+                           event_callback=self.callback)
+        front = DbgFrontend([wrap.dbg], Shell())
 
         # This function is tested
         front.watchpoint_var(f'{access} 0x20 {int(hit)}')
 
         self.expected_access = expected_access
         self.count = 0
-        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
-            emu_dbg.emu.start()
+        with patch("fiit.shell.Shell.wait_for_prompt_suspend"):
+            wrap.start()
 
         assert self.count == hit
 
     @pytest.mark.usefixtures('clear_log')
     def test_read_watchpoint_area(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
         exp = [
-            ('dbg', logging.INFO,
+            ('dbg@cpu0', logging.INFO,
              'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 1, access read from 0x00000008'),
-            ('dbg', logging.INFO,
+            ('dbg@cpu0', logging.INFO,
              'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 2, access read from 0x00000008')]
         self._test_area('r', 2, ['r', 'r'])
         assert exp == caplog.record_tuples
 
     @pytest.mark.usefixtures('clear_log')
     def test_write_watchpoint_area(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
         exp = [
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 1, access write from 0x0000000c'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 2, access write from 0x0000000c')]
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 1, access write from 0x0000000c'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 2, access write from 0x0000000c')]
         self._test_area('w', 2, ['w', 'w'])
         assert exp == caplog.record_tuples
 
     @pytest.mark.usefixtures('clear_log')
     def test_read_write_watchpoint_area(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
         exp = [
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 1, access read from 0x00000008'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 2, access write from 0x0000000c'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 3, access read from 0x00000008'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 4, access write from 0x0000000c')]
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 1, access read from 0x00000008'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 2, access write from 0x0000000c'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 3, access read from 0x00000008'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 4, access write from 0x0000000c')]
         self._test_area('rw', 4, ['r', 'w', 'r', 'w'])
         assert exp == caplog.record_tuples
 
     @pytest.mark.usefixtures('clear_log')
     def test_read_watchpoint_var(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
         exp = [
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 1, access read from 0x00000008'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 2, access read from 0x00000008')]
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 1, access read from 0x00000008'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 2, access read from 0x00000008')]
         self._test_var('r', 2, ['r', 'r'])
         assert exp == caplog.record_tuples
 
     @pytest.mark.usefixtures('clear_log')
     def test_write_watchpoint_var(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
         exp = [
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 1, access write from 0x0000000c'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 2, access write from 0x0000000c')]
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 1, access write from 0x0000000c'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 2, access write from 0x0000000c')]
         self._test_var('w', 2, ['w', 'w'])
         assert exp == caplog.record_tuples
 
     @pytest.mark.usefixtures('clear_log')
     def test_read_write_watchpoint_var(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
         exp = [
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 1, access read from 0x00000008'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 2, access write from 0x0000000c'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 3, access read from 0x00000008'),
-            ('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 4, access write from 0x0000000c')]
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 1, access read from 0x00000008'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 2, access write from 0x0000000c'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 3, access read from 0x00000008'),
+            ('dbg@cpu0', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000020], hit 4, access write from 0x0000000c')]
         self._test_var('rw', 4, ['r', 'w', 'r', 'w'])
         assert exp == caplog.record_tuples
 
@@ -367,18 +315,23 @@ class TestDeleteWatchpoint:
 
     @pytest.mark.usefixtures('clear_log')
     def test(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
-        emu_dbg = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
-                              debug_event_callback=self.callback)
-        self.front = DbgFrontend(emu_dbg.dbg, Shell())
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
+        wrap = BinBlob2Dbg(BlobArmEl32ReadWriteLoop,
+                           event_callback=self.callback)
+        self.front = DbgFrontend([wrap.dbg], Shell())
         self.front.watchpoint_area('r 0x20 0x24')
         self.count = 0
 
-        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
-            emu_dbg.emu.start()
+        with patch("fiit.shell.Shell.wait_for_prompt_suspend"):
+            wrap.start()
 
         assert self.count == 1
-        assert caplog.record_tuples == [('dbg', logging.INFO, 'watchpoint at 0x00000020, area [0x00000020-0x00000024], hit 1, access read from 0x00000008')]
+        assert caplog.record_tuples == [
+            ('dbg@cpu0',
+             logging.INFO,
+             'watchpoint at 0x00000020, area [0x00000020-0x00000024], '
+             'hit 1, access read from 0x00000008')
+        ]
 
 
 def test_watchpoint_print(capsys):
@@ -387,21 +340,9 @@ def test_watchpoint_print(capsys):
         '-------  ----------  ----------  --------  -----\n'
         '      1  0x00000020  0x00000024  r             0\n'
     )
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl32ReadWriteLoop).dbg,
+    front = DbgFrontend([BinBlob2Dbg(BlobArmEl32ReadWriteLoop).dbg],
                         Shell())
     front.watchpoint_area('r 0x20 0x24 5')
-    front.watchpoint_print('')
-    assert capsys.readouterr().out == out
-
-
-def test_watchpoint_print_64(capsys):
-    out = (
-        '  index  begin               end                 access      hit\n'
-        '-------  ------------------  ------------------  --------  -----\n'
-        '      1  0x0000000000000004  0x0000000000000008  r             0\n'
-    )
-    front = DbgFrontend(BinBlob2Dbg(BlobArmEl64Demo).dbg, Shell())
-    front.watchpoint_area('r 0x4 0x8 5')
     front.watchpoint_print('')
     assert capsys.readouterr().out == out
 
@@ -426,21 +367,23 @@ class TestSetStepFromBp:
 
     @pytest.mark.usefixtures('clear_log')
     def test(self, caplog):
-        caplog.set_level(logging.INFO, 'fiit.dbg')
-        emu_dbg = BinBlob2Dbg(BlobArmEl32MultiBlock,
-                              debug_event_callback=self.bp_callback)
-        self.front = DbgFrontend(emu_dbg.dbg, Shell())
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
+        wrap = BinBlob2Dbg(
+            BlobArmEl32MultiBlock, event_callback=self.bp_callback
+        )
+        self.front = DbgFrontend([wrap.dbg], Shell())
         self.front.breakpoint_set('0x10 1')
         self.bp_count = 0
-        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
-            emu_dbg.emu.start()
+
+        with patch("fiit.shell.Shell.wait_for_prompt_suspend"):
+            wrap.start()
 
         assert self.bp_count == 3
 
         assert caplog.record_tuples == [
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 1'),
-            ('dbg', logging.INFO, 'step instruction at 0x00000014'),
-            ('dbg', logging.INFO, 'step instruction at 0x00000018')]
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 1'),
+            ('dbg@cpu0', logging.INFO, 'step instruction at 0x00000014'),
+            ('dbg@cpu0', logging.INFO, 'step instruction at 0x00000018')]
 
 
 class TestContinueFromBp:
@@ -451,16 +394,17 @@ class TestContinueFromBp:
 
     @pytest.mark.usefixtures('clear_log')
     def test(self, caplog):
-        emu_dbg = BinBlob2Dbg(BlobArmEl32MultiBlock,
-                              debug_event_callback=self.bp_callback)
-        caplog.set_level(logging.INFO, 'fiit.dbg')
-        self.front = DbgFrontend(emu_dbg.dbg, Shell())
+        wrap = BinBlob2Dbg(BlobArmEl32MultiBlock,
+                           event_callback=self.bp_callback)
+        caplog.set_level(logging.INFO, 'fiit.dbg@cpu0')
+        self.front = DbgFrontend([wrap.dbg], Shell())
         self.front.breakpoint_set('0x10 1')
         self.bp_count = 0
-        with patch("fiit.plugins.shell.Shell.wait_for_prompt_suspend"):
-            emu_dbg.emu.start()
+
+        with patch("fiit.shell.Shell.wait_for_prompt_suspend"):
+            wrap.start()
 
         assert self.bp_count == 1
-        assert emu_dbg.emu.uc.reg_read(emu_dbg.dbg.cpu_reg['pc']) == 0x50
+        assert wrap.dbg.cpu.regs.arch_pc == 0x50
         assert caplog.record_tuples == [
-            ('dbg', logging.INFO, 'Breakpoint at 0x00000010, hit 1')]
+            ('dbg@cpu0', logging.INFO, 'breakpoint at 0x00000010, hit 1')]

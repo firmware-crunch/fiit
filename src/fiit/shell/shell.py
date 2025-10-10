@@ -67,8 +67,8 @@ def _get_zmq_ipython_shell(
                 return wrapper._kernel.shell
 
 
-def register_alias(alias_name):
-    def wrap(func):
+def register_alias(alias_name: str) -> Any:
+    def wrap(func: Callable) -> Any:
         func.__IPYTHON_ALIAS__ = alias_name
         return func
     return wrap
@@ -115,11 +115,11 @@ class Shell(IPython.core.magic.Magics):
         with open(self._remote_ipykernel_wrapper.connection_filename) as f:
             return f.read()
 
-    def register_magics(self, inst):
+    def register_magics(self, inst: Any) -> None:
         self.magic_class_instances.append(inst)
         self.shell.register_magics(inst)
 
-    def register_aliases(self, inst):
+    def register_aliases(self, inst: Any) -> None:
         for name, obj in inspect.getmembers(inst, inspect.ismethod):
             if hasattr(obj, '__IPYTHON_ALIAS__'):
                 self.shell.magics_manager.register_alias(
@@ -171,11 +171,11 @@ class Shell(IPython.core.magic.Magics):
     def wait_for_prompt_suspend(self):
         self._prompt_is_lock.wait()
 
-    def suspend(self):
+    def suspend(self) -> None:
         self._prompt_is_unlocked.clear()
         self._prompt_is_lock.set()
 
-    def resume(self):
+    def resume(self) -> None:
         self._prompt_is_unlocked.set()
         self._prompt_is_lock.clear()
 
