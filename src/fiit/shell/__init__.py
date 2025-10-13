@@ -31,7 +31,7 @@ from .shell import (
     register_alias
 )
 
-from .fiit_jupyter import (
+from .jupyter import (
     fiit_jupyter,
     fiit_jupyter_from_backend
 )

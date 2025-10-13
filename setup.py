@@ -71,7 +71,7 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'fiit=fiit.fiit:main',
-            'fiit_jupyter=fiit.shell.fiit_jupyter:fiit_jupyter'
+            'fiit_jupyter=fiit.shell.jupyter:fiit_jupyter'
         ]
     },
     zip_safe=False,
