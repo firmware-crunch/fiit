@@ -57,7 +57,7 @@ class BackendDataWrapper(metaclass=ThreadSafeSingleton):
         self.data = BackendData()
 
 
-class NetBackendDataContext:
+class ComBackendDataContext:
     def __init__(self) -> None:
         self._backend_data_wrapper = BackendDataWrapper()
 

@@ -21,15 +21,15 @@
 
 from typing import Dict, Any
 from fiit.plugin import FiitPlugin, FiitPluginContext
-from fiit.net import (
-    NetBackend, NetBackendDataContext, NET_BACKEND_REQUEST_DEFAULT_PORT
+from fiit.com import (
+    ComBackend, ComBackendDataContext, COM_BACKEND_REQ_DEFAULT_PORT
 )
 
 from . import CTX_SHELL
 
 
-class PluginNetwork(FiitPlugin):
-    NAME = 'plugin_net_backend'
+class PluginCom(FiitPlugin):
+    NAME = 'plugin_com'
     OPTIONAL_REQUIREMENTS = [CTX_SHELL.as_require()]
     CONFIG_SCHEMA = {
         NAME: {
@@ -40,7 +40,7 @@ class PluginNetwork(FiitPlugin):
                                             'required': False},
                 'event_pub_port': {'type': 'integer', 'required': True},
                 'request_port': {'type': 'integer', 'required': False,
-                                 'default': NET_BACKEND_REQUEST_DEFAULT_PORT}
+                                 'default': COM_BACKEND_REQ_DEFAULT_PORT}
             }
         }
     }
@@ -52,9 +52,9 @@ class PluginNetwork(FiitPlugin):
         requirements: Dict[str, Any],
         optional_requirements: Dict[str, Any]
     ) -> None:
-        backend = NetBackend(**plugin_config)
+        backend = ComBackend(**plugin_config)
 
-        with NetBackendDataContext() as backend_data:
+        with ComBackendDataContext() as backend_data:
             if emulator_shell := plugins_context.get(CTX_SHELL.name):
                 if emulator_shell._remote_ipykernel:
                     backend_data.jupyter_client_json_config = \

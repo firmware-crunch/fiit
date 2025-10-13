@@ -37,8 +37,8 @@ from jupyter_console.ptshell import ZMQTerminalInteractiveShell, ask_yes_no
 from jupyter_console.app import ZMQTerminalIPythonApp
 from jupyter_client.consoleapp import JupyterConsoleApp
 
-from ..net.messages import BACKEND_REQ_GET_BACKEND_DATA
-from ..net import NET_BACKEND_REQUEST_DEFAULT_PORT, BackendRequest
+from ..com.messages import BACKEND_REQ_GET_BACKEND_DATA
+from ..com import COM_BACKEND_REQ_DEFAULT_PORT, BackendRequest
 
 
 class RemoteKernelSync(Exception):
@@ -278,7 +278,7 @@ fiit_jupyter = SynchronizedTerminalApp.launch_instance
 
 def fiit_jupyter_from_backend(
     backend_ip: str,
-    backend_port: str=f'{NET_BACKEND_REQUEST_DEFAULT_PORT}'
+    backend_port: str=f'{COM_BACKEND_REQ_DEFAULT_PORT}'
 ) -> None:
     zmq_context = zmq.Context()
     sock = zmq_context.socket(zmq.REQ)

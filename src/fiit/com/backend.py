@@ -31,7 +31,7 @@ import traceback
 import zmq
 import cerberus
 
-from .data import NetBackendDataContext
+from .data import ComBackendDataContext
 from .messages import (
     EventMsg, backend_request_schema, JSON_RPC_VER,
     BackendRequest, BackendResponse, BackendErrorObject, BackendErrorResponse,
@@ -71,15 +71,15 @@ class BackendInternalClient:
         self._pair_client.send_json(dataclasses.asdict(req))
 
 
-NET_BACKEND_REQUEST_DEFAULT_PORT = 2560
+COM_BACKEND_REQ_DEFAULT_PORT = 2560
 
 
-class NetBackend:
+class ComBackend:
     _backend_req_validator = cerberus.Validator(backend_request_schema)
 
     def __init__(
         self, event_pub_port: int,
-        request_port: int = NET_BACKEND_REQUEST_DEFAULT_PORT,
+        request_port: int = COM_BACKEND_REQ_DEFAULT_PORT,
         allow_remote_connection: bool = True
     ) -> None:
         ###################################################
@@ -131,7 +131,7 @@ class NetBackend:
         ###################################################
         # Backend Objects
         ###################################################
-        with NetBackendDataContext() as backend_data:
+        with ComBackendDataContext() as backend_data:
             backend_data.event_queue_info.ip = machine_ip
             backend_data.event_queue_info.port = event_pub_port
 
@@ -173,7 +173,7 @@ class NetBackend:
         zmq_socket.send_json(res)
 
     def _request_get_backend_data(self, req: BackendRequest) -> None:
-        with NetBackendDataContext() as backend_data:
+        with ComBackendDataContext() as backend_data:
             data = dataclasses.asdict(backend_data)
             self._backend_response(self._backend_socket, req.id, data)
 

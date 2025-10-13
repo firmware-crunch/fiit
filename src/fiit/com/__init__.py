@@ -21,5 +21,5 @@
 
 from .messages import BackendRequest
 from .backend import (
-    NetBackend, NetBackendDataContext, NET_BACKEND_REQUEST_DEFAULT_PORT
+    ComBackend, ComBackendDataContext, COM_BACKEND_REQ_DEFAULT_PORT
 )

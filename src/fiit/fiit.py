@@ -26,7 +26,7 @@ from importlib import metadata
 
 from .logger import FiitLogger
 from .plugin import PluginManager
-from .net import NET_BACKEND_REQUEST_DEFAULT_PORT
+from .com import COM_BACKEND_REQ_DEFAULT_PORT
 from .shell import fiit_jupyter_from_backend
 
 
@@ -83,7 +83,7 @@ def main() -> None:
         '--backend-ip', required=True, help='fiit backend IP address.')
     parser_console.add_argument(
         '--backend-port', required=False, help='fiit backend port number.',
-        default=f'{NET_BACKEND_REQUEST_DEFAULT_PORT}')
+        default=f'{COM_BACKEND_REQ_DEFAULT_PORT}')
 
     ###################################
     # parsing
