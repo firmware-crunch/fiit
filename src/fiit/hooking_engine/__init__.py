@@ -20,7 +20,7 @@
 ################################################################################
 
 from .engine import HookingEngine
-from .engine_types import (
+from .defines import (
     FuncHookMeta, HookingContext, FUNC_HOOK_META_TAG, HookHandler,
     InterceptorPreHookConfig, InterceptorPostHookConfig, InterceptorHookEntry,
     HookingEngineException

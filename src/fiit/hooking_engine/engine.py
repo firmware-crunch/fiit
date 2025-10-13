@@ -31,7 +31,7 @@ from fiit.arch_ctypes import configure_ctypes, CTypesTranslator, PYCPARSER
 from fiit.arch_ctypes.base_types import FunctionSpec, ArgSpec
 
 from .cc import get_calling_convention_by_arch, get_calling_convention_by_name
-from .engine_types import (
+from .defines import (
     FuncHookMeta, HookingContext, FUNC_HOOK_META_TAG, HookHandler,
     InterceptorPreHookConfig, InterceptorPostHookConfig, InterceptorHookEntry,
     HookingEngineException
