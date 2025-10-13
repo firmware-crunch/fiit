@@ -31,7 +31,7 @@ from fiit.arch_ctypes.base_types import (
     FundBaseType, ArgSpec
 )
 
-from .cc_base import CallingConvention, CpuContext, FuncArg, ReturnValue
+from .cc import CallingConvention, CpuContext, FuncArg, ReturnValue
 
 
 class CallingConventionARM(CallingConvention):

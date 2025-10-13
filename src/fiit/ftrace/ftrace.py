@@ -23,7 +23,7 @@ import logging
 import os
 from typing import Any, Dict, Union, List, Tuple
 
-from ..hooking_engine.cc_base import FuncArg, ReturnValue
+from ..hooking_engine.cc import FuncArg, ReturnValue
 from ..hooking_engine.engine import (
     HookingEngine, FuncHookMeta, HookingContext
 )

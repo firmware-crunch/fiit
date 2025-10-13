@@ -19,10 +19,22 @@
 #
 ################################################################################
 
+__all__ = [
+    'get_calling_convention_by_arch',
+    'get_calling_convention_by_name',
+    'CallingConvention',
+    'ReturnValue',
+    'FuncArg',
+    'CpuRegisters',
+    'CallingConventionARM'
+]
+
 from typing import Type
 
-from .cc_base import CallingConvention
-from .cc_aapcs32 import CallingConventionARM
+from .aapcs32 import CallingConventionARM
+from .cc import (
+    CallingConvention, ReturnValue, FuncArg, CpuContext, CpuRegisters
+)
 
 
 CC = {
@@ -31,12 +43,15 @@ CC = {
 
 
 def get_calling_convention_by_arch(arch: str) -> Type[CallingConvention]:
-    for cc_arch_names, cc in CC.items():
+    for cc_arch_names, calling_convention in CC.items():
         if arch in cc_arch_names:
-            return cc
+            return calling_convention
     raise ValueError(f'calling convention not found for arch "{arch}"')
 
 
 def get_calling_convention_by_name(cc_name: str) -> Type[CallingConvention]:
-    return list(filter(lambda cc: cc.NAME == cc_name, CC.values()))[0]
+    for calling_convention in CC.values():
+        if calling_convention.NAME == cc_name:
+            return calling_convention
 
+    raise ValueError(f'calling convention name not found for "{cc_name}"')

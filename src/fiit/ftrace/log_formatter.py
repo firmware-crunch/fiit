@@ -30,7 +30,7 @@ from ..arch_ctypes.base_types import (
     CBaseType, DataPointerBase, CodePointerBase, IntegralType, FloatType,
     Char, Bool, _Bool
 )
-from ..hooking_engine.cc_base import FuncArg, ReturnValue
+from ..hooking_engine.cc import FuncArg, ReturnValue
 from ..hooking_engine.engine import HookingContext
 
 

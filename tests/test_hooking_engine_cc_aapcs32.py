@@ -26,7 +26,7 @@ from fiit.machine import DeviceCpu, CpuEndian
 from fiit.arch_ctypes.base_types import Struct, Float, Double, UnsignedInt, Char
 from fiit.arch_ctypes.arch_arm import Fp16
 from fiit.arch_ctypes import configure_ctypes
-from fiit.hooking_engine.cc_aapcs32 import CallingConventionARM
+from fiit.hooking_engine.cc.aapcs32 import CallingConventionARM
 
 from .fixtures.cc.cc_tester import BasePyTestCallingConvention
 from .fixtures.cpu_utils import Blob2Cpu
