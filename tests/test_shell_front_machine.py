@@ -24,7 +24,7 @@ from io import StringIO
 from unittest.mock import patch
 
 from fiit.shell import Shell
-from fiit.shell.front_machine import MachineFrontend
+from fiit.shell.front import MachineFrontend
 from fiit.machine import TickUnit, DeviceCpu, Machine
 
 from .fixtures import Blob2Cpu

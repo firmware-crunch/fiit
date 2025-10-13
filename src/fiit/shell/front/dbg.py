@@ -38,7 +38,7 @@ from fiit.dbg import (
     Debugger, DBG_EVENT_STEP, DBG_EVENT_WATCHPOINT, DBG_EVENT_BREAKPOINT
 )
 
-from .shell import Shell, register_alias
+from ..shell import Shell, register_alias
 
 # ==============================================================================
 

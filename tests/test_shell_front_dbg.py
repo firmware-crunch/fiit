@@ -33,7 +33,7 @@ from .fixtures.blobs import (
 )
 
 from fiit.shell import Shell
-from fiit.shell.front_dbg import DbgFrontend
+from fiit.shell.front import DbgFrontend
 from fiit.dbg import (
     DebuggerFactory,
     Debugger,

@@ -33,7 +33,7 @@ from IPython.core import magic
 
 from fiit.machine import Machine, DeviceCpu
 
-from .shell import register_alias, Shell
+from ..shell import register_alias, Shell
 
 # ==============================================================================
 

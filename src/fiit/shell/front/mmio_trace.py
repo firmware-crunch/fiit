@@ -35,7 +35,7 @@ from IPython.core.magic_arguments import (
 
 from fiit.mmio_trace import MmioTrace,MmioTraceViz
 
-from .shell import Shell
+from ..shell import Shell
 
 # ==============================================================================
 

@@ -25,16 +25,15 @@ __all__ = [
 
 from typing import Optional, Dict, Any, Union, cast, List
 
-from fiit.shell import Shell
-from fiit.shell.front_machine import MachineFrontend
-from fiit.shell.front_dbg import DbgFrontend
-from fiit.shell.front_cdata_mmap import CDataMemMapperFrontend
-from fiit.shell.front_mmio_dbg import MmioDbgFrontend
-from fiit.shell.front_mmio_trace import MmioTraceVizFrontend
 from fiit.dbg import Debugger
 from fiit.arch_ctypes.cdata_mmap import CDataMemMapper
 from fiit.mmio_trace import MmioTrace, MmioDbg
 from fiit.plugin import FiitPlugin, FiitPluginContext
+from fiit.shell import Shell
+from fiit.shell.front import (
+    MachineFrontend, DbgFrontend, CDataMemMapperFrontend, MmioDbgFrontend,
+    MmioTraceVizFrontend
+)
 
 from . import (
     CTX_SHELL, CTX_REQ_MACHINE, CTX_REQ_DBG, CTX_REQ_CDATA_MMAP,
