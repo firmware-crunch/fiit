@@ -27,7 +27,7 @@ from cmsis_svd.model import SVDRegister
 from fiit.machine import DeviceCpu
 from fiit.emunicorn import CpuUnicorn, unicorn_fix_issue_972
 
-from .svd_helper import SvdIndex
+from .svd import SvdIndex
 from .filter import MmioFilter
 
 

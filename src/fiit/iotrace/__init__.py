@@ -19,6 +19,10 @@
 #
 ################################################################################
 
-from .mmio_trace import MmioTrace
-from .mmio_dbg import MmioDbg
-from .traceviz import MmioTraceViz
+__all__ = [
+    'MmioTracer',
+    'MmioDbg',
+    'MmioTraceViz'
+]
+
+from .mmio import MmioTracer, MmioDbg, MmioTraceViz

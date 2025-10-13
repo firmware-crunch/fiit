@@ -23,8 +23,8 @@ from typing import Dict, List, Set, Union
 
 from cmsis_svd.model import SVDRegister
 
-from .svd_helper import SvdIndex
-from .reg_helper import get_field
+from .svd import SvdIndex
+from .reg import get_field
 
 
 class RegisterField:

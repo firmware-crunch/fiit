@@ -47,7 +47,7 @@ from fiit.dbg import Debugger
 from fiit.arch_ctypes import CDataMemMapper
 from fiit.hooking.engine import HookingEngine
 from fiit.ftrace.ftrace import Ftrace
-from fiit.mmio_trace import MmioTrace, MmioDbg
+from fiit.iotrace import MmioTracer, MmioDbg
 
 # ==============================================================================
 
@@ -61,7 +61,7 @@ CTX_REQ_DBG = CTX_DBG.as_require()
 CTX_CDATA_MMAP = ContextObject('cdata_mmap', List[CDataMemMapper])
 CTX_REQ_CDATA_MMAP = CTX_CDATA_MMAP.as_require()
 
-CTX_MMIO_TRACER = ContextObject('mmio_tracer', List[MmioTrace])
+CTX_MMIO_TRACER = ContextObject('mmio_tracer', List[MmioTracer])
 CTX_REQ_MMIO_TRACER = CTX_MMIO_TRACER.as_require()
 
 CTX_MMIO_DBG = ContextObject('mmio_dbg', List[MmioDbg])

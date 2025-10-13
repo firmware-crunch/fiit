@@ -27,7 +27,7 @@ from typing import Optional, Dict, Any, Union, cast, List
 
 from fiit.dbg import Debugger
 from fiit.arch_ctypes.cdata_mmap import CDataMemMapper
-from fiit.mmio_trace import MmioTrace, MmioDbg
+from fiit.iotrace import MmioTracer, MmioDbg
 from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.shell import Shell
 from fiit.shell.front import (
@@ -108,7 +108,7 @@ class PluginShell(FiitPlugin):
         mmio_tracer_list = optional_requirements.get(CTX_REQ_MMIO_TRACER.name, None)
 
         if mmio_tracer_list is not None:
-            mmio_tracer_list = cast(List[MmioTrace], mmio_tracer_list)
+            mmio_tracer_list = cast(List[MmioTracer], mmio_tracer_list)
             MmioTraceVizFrontend(mmio_tracer_list, self.shell)
 
         mmio_dbg_list = optional_requirements.get(CTX_REQ_MMIO_DBG.name, None)

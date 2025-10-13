@@ -26,7 +26,7 @@ from cmsis_svd.model import SVDRegister
 
 from fiit.machine import DeviceCpu
 
-from .svd_helper import SvdIndex, SvdLoader
+from .svd import SvdIndex, SvdLoader
 from .interceptor import MonitoredMemory
 from .logger import MmioLogger
 from .interceptor import MmioInterceptor
@@ -200,7 +200,7 @@ class MmioDataTrace:
         return registers
 
 
-class MmioTrace:
+class MmioTracer:
 
     def __init__(
         self,

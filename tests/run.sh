@@ -58,7 +58,7 @@ test_arch_ctypes_cdata_mmap.py                                                 \
 test_arch_ctypes_config.py                                                     \
 test_arch_ctypes_translator.py                                                 \
                                                                                \
-test_mmio_trace_filter.py                                                      \
+test_iotrace_mmio_filter.py                                                    \
                                                                                \
 test_shell_front_dbg.py                                                        \
 test_shell_front_machine.py                                                    \

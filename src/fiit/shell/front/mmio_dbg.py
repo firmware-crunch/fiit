@@ -31,7 +31,7 @@ from IPython.core.magic_arguments import (
     argument, magic_arguments, parse_argstring
 )
 
-from fiit.mmio_trace import MmioDbg
+from fiit.iotrace import MmioDbg
 from ..shell import Shell
 
 # ==============================================================================

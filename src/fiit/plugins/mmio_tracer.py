@@ -31,12 +31,12 @@ from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.dbg import Debugger
 from fiit.machine import Machine
 from fiit.config_loader import normalize_hex_int64
-from fiit.mmio_trace import MmioTrace, MmioDbg
-from fiit.mmio_trace.filter import (
+from fiit.iotrace import MmioTracer, MmioDbg
+from fiit.iotrace.mmio.filter import (
     CodeAddress, RegisterAddress, RegisterAddressFieldsMap, SvdPeripheralName,
     SvdPeripheralRegisterTree, SvdPeripheralRegisterFieldTree, RegisterField
 )
-from fiit.mmio_trace.interceptor import (
+from fiit.iotrace.mmio.interceptor import (
     WatchMemoryRangeDict, WatchRegisterDict, WatchSvdPeripheralDict,
     WatchSvdRegisterDict
 )
@@ -330,11 +330,11 @@ class PluginMmioTracer(FiitPlugin):
         optional_requirements: Dict[str, Any]
     ):
         machine = cast(Machine, requirements[CTX_MACHINE.name])
-        tracers: List[MmioTrace] = []
+        tracers: List[MmioTracer] = []
 
         for cpu_name, config in plugin_config.items():
             cpu = machine.get_device_cpu(cpu_name)
-            mmio_tracer = MmioTrace(
+            mmio_tracer = MmioTracer(
                 cpu,
                 monitored_memory=config['monitored_memory'],
                 mmio_filters=config['mmio_filters'],

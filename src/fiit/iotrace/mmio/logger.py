@@ -26,7 +26,7 @@ from cmsis_svd.model import SVDRegister, SVDField
 
 from fiit.machine import Memory, DeviceCpu
 
-from .reg_helper import get_field
+from .reg import get_field
 from .interceptor import MonitoredMemory
 
 

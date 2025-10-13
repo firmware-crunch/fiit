@@ -33,7 +33,7 @@ from IPython.core.magic_arguments import (
     argument, magic_arguments, parse_argstring
 )
 
-from fiit.mmio_trace import MmioTrace,MmioTraceViz
+from fiit.iotrace import MmioTracer, MmioTraceViz
 
 from ..shell import Shell
 
@@ -42,7 +42,7 @@ from ..shell import Shell
 
 @IPython.core.magic.magics_class
 class MmioTraceVizFrontend(IPython.core.magic.Magics):
-    def __init__(self, mmio_tracer_list: List[MmioTrace], shell: Shell):
+    def __init__(self, mmio_tracer_list: List[MmioTracer], shell: Shell):
         self._mmio_tracer_list = mmio_tracer_list
         self._trace_viz_list = {
             mmio_tracer: MmioTraceViz(mmio_tracer.mmio_data_trace)
@@ -53,7 +53,7 @@ class MmioTraceVizFrontend(IPython.core.magic.Magics):
         self._shell.register_magics(self)
         self._shell.register_aliases(self)
 
-    def _get_mmio_tracer(self, cpu_name: str) -> Union[MmioTrace, None]:
+    def _get_mmio_tracer(self, cpu_name: str) -> Union[MmioTracer, None]:
         for mmio_tracer in self._mmio_tracer_list:
             if mmio_tracer.cpu.name == cpu_name:
                 return mmio_tracer

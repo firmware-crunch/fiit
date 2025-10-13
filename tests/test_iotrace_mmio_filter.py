@@ -19,8 +19,8 @@
 #
 ################################################################################
 
-from fiit.mmio_trace.svd_helper import SvdLoader, SvdIndex
-from fiit.mmio_trace.filter import MmioFilter, RegisterField
+from fiit.iotrace.mmio.svd import SvdLoader, SvdIndex
+from fiit.iotrace.mmio.filter import MmioFilter, RegisterField
 
 
 def test_keep_from_address():

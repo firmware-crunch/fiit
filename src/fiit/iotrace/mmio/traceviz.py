@@ -29,7 +29,7 @@ import seaborn
 import plotext
 from cmsis_svd.model import SVDRegister
 
-from .mmio_trace import MmioDataTrace, MmioReadRecord, MmioWriteRecord
+from .tracer import MmioDataTrace, MmioReadRecord, MmioWriteRecord
 
 
 class MmioTraceViz:

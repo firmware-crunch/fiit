@@ -25,7 +25,7 @@ from cmsis_svd.model import SVDRegister
 
 from fiit.dbg import Debugger, DBG_EVENT_WATCHPOINT
 
-from .svd_helper import SvdLoader, SvdIndex
+from .svd import SvdLoader, SvdIndex
 from .interceptor import MmioInterceptor, MonitoredMemory
 from .logger import MmioLogger
 
