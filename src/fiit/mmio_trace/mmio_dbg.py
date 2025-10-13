@@ -48,9 +48,9 @@ class MmioDbg:
         self._monitored_memory = MonitoredMemory(
             self.mem_bit_size, **monitored_memory, svd_index=svd_index)
 
-        logger_name = f'fiit.mmio_dbg.dev@{dbg.cpu.dev_name}'
+        self.logger_name = f'fiit.mmio_dbg.dev@{dbg.cpu.dev_name}'
         self.mmio_logger = MmioLogger(
-            self.mem_bit_size, self._monitored_memory, logger_name, True)
+            self.mem_bit_size, self._monitored_memory, self.logger_name, True)
 
         self.mmio_interceptor = MmioInterceptor(
             dbg.cpu,

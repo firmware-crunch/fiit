@@ -118,7 +118,7 @@ class PluginShell(FiitPlugin):
             mmio_dbg_list = cast(List[MmioDbg], mmio_dbg_list)
 
             for mmio_dbg in mmio_dbg_list:
-                self.shell.stream_logger_to_shell_stdout(mmio_dbg.LOGGER_NAME)
+                self.shell.stream_logger_to_shell_stdout(mmio_dbg.logger_name)
 
             MmioDbgFrontend(mmio_dbg_list, self.shell)
 
