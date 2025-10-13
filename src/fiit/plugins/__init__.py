@@ -32,8 +32,8 @@ __all__ = [
     'CTX_REQ_MMIO_DBG',
     'CTX_SHELL',
     'CTX_REQ_SHELL',
-    'CTX_HOOKING_ENGINE',
-    'CTX_REQ_HOOKING_ENGINE',
+    'CTX_HOOKING',
+    'CTX_REQ_HOOKING',
     'CTX_FTRACER',
     'CTX_REQ_FTRACER'
 ]
@@ -45,7 +45,7 @@ from fiit.plugin import ContextObject
 from fiit.machine import Machine
 from fiit.dbg import Debugger
 from fiit.arch_ctypes import CDataMemMapper
-from fiit.hooking_engine.engine import HookingEngine
+from fiit.hooking.engine import HookingEngine
 from fiit.ftrace.ftrace import Ftrace
 from fiit.mmio_trace import MmioTrace, MmioDbg
 
@@ -67,8 +67,8 @@ CTX_REQ_MMIO_TRACER = CTX_MMIO_TRACER.as_require()
 CTX_MMIO_DBG = ContextObject('mmio_dbg', List[MmioDbg])
 CTX_REQ_MMIO_DBG = CTX_MMIO_DBG.as_require()
 
-CTX_HOOKING_ENGINE = ContextObject('hooking_engine', List[HookingEngine])
-CTX_REQ_HOOKING_ENGINE = CTX_HOOKING_ENGINE.as_require()
+CTX_HOOKING = ContextObject('hooking', List[HookingEngine])
+CTX_REQ_HOOKING = CTX_HOOKING.as_require()
 
 CTX_FTRACER = ContextObject('ftracer', List[Ftrace])
 CTX_REQ_FTRACER = CTX_FTRACER.as_require()

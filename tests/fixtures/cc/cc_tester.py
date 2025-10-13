@@ -23,7 +23,7 @@ from typing import Callable, Dict, Optional, Any, Type
 import copy
 
 from fiit.machine import DeviceCpu
-from fiit.hooking_engine.cc import CallingConvention
+from fiit.hooking.cc import CallingConvention
 from fiit.arch_ctypes.config import configure_ctypes
 from fiit.arch_ctypes.translator import CTypesTranslator
 from fiit.arch_ctypes.base_types import (

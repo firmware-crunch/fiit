@@ -23,18 +23,18 @@ from typing import Any, Dict, cast, List
 
 from fiit.machine import Machine
 from fiit.arch_ctypes import CTYPES_TRANSLATOR_FLAVOR
-from fiit.hooking_engine.engine import HookingEngine
+from fiit.hooking.engine import HookingEngine
 from fiit.plugin import FiitPlugin, FiitPluginContext
 
-from . import CTX_REQ_MACHINE, CTX_HOOKING_ENGINE
+from . import CTX_REQ_MACHINE, CTX_HOOKING
 
 # ==============================================================================
 
 
-class PluginHookingEngine(FiitPlugin):
-    NAME = 'plugin_hooking_engine'
+class PluginHooking(FiitPlugin):
+    NAME = 'plugin_hooking'
     REQUIREMENTS = [CTX_REQ_MACHINE]
-    OBJECTS_PROVIDED = [CTX_HOOKING_ENGINE]
+    OBJECTS_PROVIDED = [CTX_HOOKING]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -101,4 +101,4 @@ class PluginHookingEngine(FiitPlugin):
 
             engines.append(he)
 
-        plugins_context.add(CTX_HOOKING_ENGINE.name, engines)
+        plugins_context.add(CTX_HOOKING.name, engines)

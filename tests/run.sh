@@ -69,6 +69,6 @@ test_plugin_logger.py                                                          \
 test_plugin_machine.py                                                         \
 test_plugin_shell.py                                                           \
                                                                                \
-test_hooking_engine_cc_aapcs32.py
+test_hooking_cc_aapcs32.py
 
 rm -rf .pytest_cache

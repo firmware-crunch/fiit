@@ -21,7 +21,7 @@
 
 from typing import Any, Dict, cast, List
 
-from fiit.hooking_engine import HookingEngine
+from fiit.hooking import HookingEngine
 from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.dev_utils import pkg_object_loader
 from fiit.ftrace import (
@@ -29,7 +29,7 @@ from fiit.ftrace import (
     FUNC_TRACER_EXT_DIR, FUNC_TRACE_LOG_BIN, FUNC_TRACE_LOG_PYTHON
 )
 
-from . import CTX_REQ_HOOKING_ENGINE, CTX_FTRACER
+from . import CTX_REQ_HOOKING, CTX_FTRACER
 
 
 def _get_filter_ext_conf_schema() -> dict:
@@ -60,7 +60,7 @@ def normalize_log_output_type(value: dict) -> int:
 
 class PluginFtrace(FiitPlugin):
     NAME = 'plugin_ftrace'
-    REQUIREMENTS = [CTX_REQ_HOOKING_ENGINE]
+    REQUIREMENTS = [CTX_REQ_HOOKING]
     OBJECTS_PROVIDED = [CTX_FTRACER]
     CONFIG_SCHEMA = {
         NAME: {
@@ -133,7 +133,7 @@ class PluginFtrace(FiitPlugin):
     ):
         tracer: List[Ftrace] = []
         hook_engines = cast(List[HookingEngine],
-                            requirements[CTX_REQ_HOOKING_ENGINE.name])
+                            requirements[CTX_REQ_HOOKING.name])
 
         for cpu_name, config in plugin_config.items():
             hook_engine_found = False

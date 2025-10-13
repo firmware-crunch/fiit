@@ -25,7 +25,7 @@ import logging
 from fiit.machine import DeviceCpu
 from fiit.arch_ctypes.base_types import DataPointerBase
 from fiit.arch_ctypes import CDataMemMapCache
-from fiit.hooking_engine.engine import HookingContext
+from fiit.hooking.engine import HookingContext
 from fiit.ftrace import FunctionFilterExtBase, LogFormatterExtBase
 
 
