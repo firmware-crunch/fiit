@@ -36,7 +36,7 @@ from fiit.shell.front import (
 )
 
 from . import (
-    CTX_SHELL, CTX_REQ_MACHINE, CTX_REQ_DBG, CTX_REQ_CDATA_MMAP,
+    CTX_SHELL, CTX_REQ_MACHINE, CTX_REQ_DBG, CTX_REQ_CDATA,
     CTX_REQ_MMIO_DBG, CTX_REQ_MMIO_TRACER
 )
 
@@ -55,7 +55,7 @@ class PluginShell(FiitPlugin):
     OPTIONAL_REQUIREMENTS = [
         CTX_REQ_MACHINE,
         CTX_REQ_DBG,
-        CTX_REQ_CDATA_MMAP,
+        CTX_REQ_CDATA,
         CTX_REQ_MMIO_TRACER,
         CTX_REQ_MMIO_DBG,
     ]
@@ -99,7 +99,7 @@ class PluginShell(FiitPlugin):
             dbg_list = cast(List[Debugger], dbg_list)
             DbgFrontend(dbg_list, self.shell)
 
-        cdata_mmap_list = optional_requirements.get(CTX_REQ_CDATA_MMAP.name, None)
+        cdata_mmap_list = optional_requirements.get(CTX_REQ_CDATA.name, None)
 
         if cdata_mmap_list is not None:
             cdata_mmap_list = cast(List[CDataMemMapper], cdata_mmap_list)

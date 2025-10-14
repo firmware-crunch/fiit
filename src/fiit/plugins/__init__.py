@@ -24,8 +24,8 @@ __all__ = [
     'CTX_REQ_MACHINE',
     'CTX_DBG',
     'CTX_REQ_DBG',
-    'CTX_CDATA_MMAP',
-    'CTX_REQ_CDATA_MMAP',
+    'CTX_CDATA',
+    'CTX_REQ_CDATA',
     'CTX_MMIO_TRACER',
     'CTX_REQ_MMIO_TRACER',
     'CTX_MMIO_DBG',
@@ -58,8 +58,8 @@ CTX_REQ_MACHINE = CTX_MACHINE.as_require()
 CTX_DBG = ContextObject('dbg', List[Debugger])
 CTX_REQ_DBG = CTX_DBG.as_require()
 
-CTX_CDATA_MMAP = ContextObject('cdata_mmap', List[CDataMemMapper])
-CTX_REQ_CDATA_MMAP = CTX_CDATA_MMAP.as_require()
+CTX_CDATA = ContextObject('cdata', List[CDataMemMapper])
+CTX_REQ_CDATA = CTX_CDATA.as_require()
 
 CTX_MMIO_TRACER = ContextObject('mmio_tracer', List[MmioTracer])
 CTX_REQ_MMIO_TRACER = CTX_MMIO_TRACER.as_require()

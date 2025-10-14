@@ -20,7 +20,7 @@
 ################################################################################
 
 __all__ = [
-    'PluginCdataMmap'
+    'PluginCdata'
 ]
 
 from typing import Dict, Any, cast, List
@@ -31,15 +31,15 @@ from fiit.ctypesarch import (
     configure_ctypes, CTypesTranslator, CDataMemMapper, CTYPES_TRANSLATOR_FLAVOR
 )
 
-from . import CTX_REQ_MACHINE, CTX_CDATA_MMAP
+from . import CTX_REQ_MACHINE, CTX_CDATA
 
 # ==============================================================================
 
 
-class PluginCdataMmap(FiitPlugin):
-    NAME = 'plugin_cdata_mmap'
+class PluginCdata(FiitPlugin):
+    NAME = 'plugin_cdata'
     REQUIREMENTS = [CTX_REQ_MACHINE]
-    OBJECTS_PROVIDED = [CTX_CDATA_MMAP]
+    OBJECTS_PROVIDED = [CTX_CDATA]
     CONFIG_SCHEMA = {
         NAME: {
             'type': 'dict',
@@ -92,4 +92,4 @@ class PluginCdataMmap(FiitPlugin):
 
             mappers.append(cdata_mem_mapper)
 
-        plugins_context.add(CTX_CDATA_MMAP.name, mappers)
+        plugins_context.add(CTX_CDATA.name, mappers)
