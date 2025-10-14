@@ -25,7 +25,7 @@ from typing import cast,  Any, Optional, Literal, List, Dict, Union, Callable
 
 from fiit.machine import DeviceCpu
 from fiit.emunicorn import CpuUnicorn
-from fiit.config_loader import ConfigLoader
+from fiit.config import ConfigLoader
 from fiit.utils import pkg_module_object_loader
 from fiit.ctypesarch import configure_ctypes, CTypesTranslator, PYCPARSER
 from fiit.ctypesarch.defines import FunctionSpec, ArgSpec

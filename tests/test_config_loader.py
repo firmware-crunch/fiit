@@ -27,7 +27,7 @@ import textwrap
 import pytest
 
 from fiit.machine import MemoryRange
-from fiit.config_loader import (
+from fiit.config import (
     ConfigLoader, ConfigLoaderError, normalize_hex_int64, normalize_hex_int)
 
 

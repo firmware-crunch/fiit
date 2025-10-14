@@ -30,7 +30,7 @@ from typing import Dict, List, Set, Any, cast
 from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.dbg import Debugger
 from fiit.machine import Machine
-from fiit.config_loader import normalize_hex_int64
+from fiit.config import normalize_hex_int64
 from fiit.iotrace import MmioTracer, MmioDbg
 from fiit.iotrace.mmio.filter import (
     CodeAddress, RegisterAddress, RegisterAddressFieldsMap, SvdPeripheralName,

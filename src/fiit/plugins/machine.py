@@ -26,7 +26,7 @@ __all__ = [
 import graphlib
 from typing import Dict, List, Any, cast, Tuple, Callable
 
-from fiit.config_loader import ConfigLoader
+from fiit.config import ConfigLoader
 from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.dev import FiitCpuFactory, ArchArm32, Pl190, Pl190IntGen
 from fiit.machine import (

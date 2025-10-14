@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from typing import Dict, Union
 
 from fiit.utils import SingletonPattern
-from fiit.config_loader import ConfigLoader
+from fiit.config import ConfigLoader
 from fiit.machine import Memory
 
 from .defines import CBaseType, DataPointerBase, mem_sync_ctypes_factory

@@ -30,7 +30,7 @@ from dataclasses import dataclass
 import graphlib
 
 from .utils import pkg_object_loader, inherits_from
-from .config_loader import ConfigLoader
+from .config import ConfigLoader
 
 
 

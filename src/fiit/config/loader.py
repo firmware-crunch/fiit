@@ -32,8 +32,9 @@ from typing import Union, Dict, Any
 
 import cerberus
 
-from .machine import MemoryRange
-from .config_schema import RULE_SET_REGISTRY
+from fiit.machine import MemoryRange
+
+from .schema import RULE_SET_REGISTRY
 
 # ==============================================================================
 
