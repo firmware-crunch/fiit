@@ -24,14 +24,14 @@ import ctypes
 import os
 from typing import Any, Dict, Union, List, cast
 
-from ..machine import DeviceCpu
-from ..dev_utils import pkg_object_loader, inherits_from
-from ..ctypesarch.defines import (
+from fiit.machine import DeviceCpu
+from fiit.utils import pkg_object_loader, inherits_from
+from fiit.ctypesarch.defines import (
     CBaseType, DataPointerBase, CodePointerBase, IntegralType, FloatType,
     Char, Bool, _Bool
 )
-from ..hooking.cc import FuncArg, ReturnValue
-from ..hooking.engine import HookingContext
+from fiit.hooking.cc import FuncArg, ReturnValue
+from fiit.hooking.engine import HookingContext
 
 
 class LogFormatterExtBase:

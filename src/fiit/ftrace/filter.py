@@ -23,9 +23,8 @@ import inspect
 import os
 from typing import Any, Dict, List, cast
 
-from ..dev_utils import pkg_object_loader, inherits_from
-from ..hooking.engine import HookingContext
-
+from fiit.utils import pkg_object_loader, inherits_from
+from fiit.hooking.engine import HookingContext
 
 
 class FunctionFilterExtBase:

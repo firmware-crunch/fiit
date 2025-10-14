@@ -29,7 +29,7 @@ import inspect
 from dataclasses import dataclass
 import graphlib
 
-from .dev_utils import pkg_object_loader, inherits_from
+from .utils import pkg_object_loader, inherits_from
 from .config_loader import ConfigLoader
 
 

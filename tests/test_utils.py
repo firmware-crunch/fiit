@@ -24,7 +24,7 @@ import textwrap
 import tempfile
 import inspect
 
-from fiit.dev_utils import inherits_from, pkg_module_object_loader
+from fiit.utils import inherits_from, pkg_module_object_loader
 
 
 def test_inherits_from():

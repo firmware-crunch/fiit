@@ -23,9 +23,9 @@ import ctypes
 from dataclasses import dataclass
 from typing import Dict, Union
 
-from ..dev_utils import SingletonPattern
-from ..config_loader import ConfigLoader
-from ..machine import Memory
+from fiit.utils import SingletonPattern
+from fiit.config_loader import ConfigLoader
+from fiit.machine import Memory
 
 from .defines import CBaseType, DataPointerBase, mem_sync_ctypes_factory
 from .config import CTypesConfig

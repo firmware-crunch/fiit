@@ -23,7 +23,7 @@ from typing import Any, Dict, cast, List
 
 from fiit.hooking import HookingEngine
 from fiit.plugin import FiitPlugin, FiitPluginContext
-from fiit.dev_utils import pkg_object_loader
+from fiit.utils import pkg_object_loader
 from fiit.ftrace import (
     Ftrace, predicate_is_func_trace_ext, predicate_is_log_format_ext,
     FUNC_TRACER_EXT_DIR, FUNC_TRACE_LOG_BIN, FUNC_TRACE_LOG_PYTHON

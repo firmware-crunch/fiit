@@ -27,7 +27,7 @@ IPY_TEST_SIMPLE_PROMPT=1 JUPYTER_PLATFORM_DIRS=1 pytest                        \
   --cov="fiit"                                                                 \
   -s -v "${@}"                                                                 \
                                                                                \
-test_dev_utils.py                                                              \
+test_utils.py                                                                  \
 test_logger.py                                                                 \
 test_config_loader.py                                                          \
                                                                                \

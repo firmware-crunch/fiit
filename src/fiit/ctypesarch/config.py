@@ -22,7 +22,7 @@
 from dataclasses import dataclass, field
 from typing import Type, cast,  Any, List, Dict, Union
 
-from ..dev_utils import SingletonPattern
+from fiit.utils import SingletonPattern
 
 from .defines import CBaseType, FACTORY_TYPE, BASIC_TYPE, EXTRA_TYPE
 from .arch.arm32 import (
