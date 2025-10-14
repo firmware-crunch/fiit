@@ -20,7 +20,7 @@
 ################################################################################
 
 __all__ = [
-    'PluginDebugger'
+    'PluginDbg'
 ]
 
 from typing import List, cast, Any, Dict
@@ -34,8 +34,8 @@ from . import CTX_REQ_MACHINE, CTX_MACHINE, CTX_DBG
 # ==============================================================================
 
 
-class PluginDebugger(FiitPlugin):
-    NAME = 'plugin_debugger'
+class PluginDbg(FiitPlugin):
+    NAME = 'plugin_dbg'
     REQUIREMENTS = [CTX_REQ_MACHINE]
     OBJECTS_PROVIDED = [CTX_DBG]
     CONFIG_SCHEMA = {
