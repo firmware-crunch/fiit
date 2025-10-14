@@ -20,7 +20,7 @@
 ################################################################################
 
 __all__ = [
-    'PluginMmioTracer',
+    'PluginMmioTrace',
     'PluginMmioDbg'
 ]
 
@@ -299,8 +299,8 @@ plugin_mmio_rule_set_registry = (
 )
 
 
-class PluginMmioTracer(FiitPlugin):
-    NAME = 'plugin_mmio_tracer'
+class PluginMmioTrace(FiitPlugin):
+    NAME = 'plugin_mmio_trace'
     REQUIREMENTS = [CTX_REQ_MACHINE]
     OBJECTS_PROVIDED = [CTX_MMIO_TRACER]
     CONFIG_SCHEMA_RULE_SET_REGISTRY = plugin_mmio_rule_set_registry

@@ -31,5 +31,5 @@ __all__ = [
 from .machine import MachineFrontend
 from .dbg import DbgFrontend
 from .cdata import CDataMemMapperFrontend
-from .mmio_dbg import MmioDbgFrontend
-from .mmio_trace import MmioTraceVizFrontend
+from .mmiodbg import MmioDbgFrontend
+from .mmiotrace import MmioTraceVizFrontend
