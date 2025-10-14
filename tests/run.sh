@@ -52,7 +52,7 @@ test_dev_factory.py                                                            \
 test_dbg_dis_capstone.py                                                       \
 test_dbg_uc.py                                                                 \
                                                                                \
-test_ctypesarch_arch_arm.py                                                    \
+test_ctypesarch_arch_arm32.py                                                  \
 test_ctypesarch_defines.py                                                     \
 test_ctypesarch_cdata.py                                                       \
 test_ctypesarch_config.py                                                      \

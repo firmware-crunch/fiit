@@ -24,7 +24,7 @@ import pytest
 from fiit import FiitCpuFactory
 from fiit.machine import DeviceCpu, CpuEndian
 from fiit.ctypesarch.defines import Struct, Float, Double, UnsignedInt, Char
-from fiit.ctypesarch.arch_arm import Fp16
+from fiit.ctypesarch.arch.arm32 import Fp16
 from fiit.ctypesarch import configure_ctypes
 from fiit.hooking.cc.aapcs32 import CallingConventionARM
 

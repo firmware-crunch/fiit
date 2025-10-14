@@ -24,7 +24,7 @@ import ctypes
 
 from fiit.ctypesarch import configure_ctypes, CTypesConfig
 from fiit.ctypesarch.defines import Void, UnsignedInt
-from fiit.ctypesarch.arch_arm import HalfFloatCodecIeee754
+from fiit.ctypesarch.arch.arm32 import HalfFloatCodecIeee754
 
 
 

@@ -20,7 +20,7 @@
 ################################################################################
 
 from fiit.ctypesarch import configure_ctypes
-from fiit.ctypesarch.arch_arm import Fp16, HalfFloatCodecIeee754
+from fiit.ctypesarch.arch.arm32 import Fp16, HalfFloatCodecIeee754
 
 
 # HalfFloatCodecIeee754

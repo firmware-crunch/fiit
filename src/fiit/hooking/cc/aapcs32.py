@@ -25,7 +25,7 @@ from typing import Type, cast, List, Dict, Union
 
 from fiit.machine import DeviceCpu
 from fiit.ctypesarch import configure_ctypes
-from fiit.ctypesarch.arch_arm import Fp16
+from fiit.ctypesarch.arch.arm32 import Fp16
 from fiit.ctypesarch.defines import (
     CBaseType, FunctionSpec, Struct, Float, Double, IntegralType,
     FundBaseType, ArgSpec

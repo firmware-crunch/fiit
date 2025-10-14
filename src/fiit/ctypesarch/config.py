@@ -25,7 +25,7 @@ from typing import Type, cast,  Any, List, Dict, Union
 from ..dev_utils import SingletonPattern
 
 from .defines import CBaseType, FACTORY_TYPE, BASIC_TYPE, EXTRA_TYPE
-from .arch_arm import (
+from .arch.arm32 import (
     arm_eb_32_ctype_config, arm_el_32_ctype_config, _FP_16_CODEC_DEFAULT,
     _FP_16_CODEC, Fp16
 )
