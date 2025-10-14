@@ -21,9 +21,8 @@
 
 import ctypes
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Dict, Optional
 
-from fiit.utils import SingletonPattern
 from fiit.config import ConfigLoader
 from fiit.machine import Memory
 
@@ -39,31 +38,19 @@ class CDataMemMapEntry:
     name: str
 
 
-class CDataMemMapCache(metaclass=SingletonPattern):
+class CDataMemMapCache:
     def __init__(self):
-        self._cache_registry: Dict[Memory, Dict[str, CDataMemMapEntry]] \
-            = dict()
+        self._cache: Dict[str, CDataMemMapEntry] = {}
 
-    def add_cache_entry(self, memory: Memory):
-        if memory not in self._cache_registry:
-            self._cache_registry.update({memory: dict()})
+    def get_all(self) -> Dict[str, CDataMemMapEntry]:
+        return dict(self._cache)
 
-    def get_cache_entry(
-        self, memory: Memory
-    ) -> Union[Dict[str, CDataMemMapEntry], None]:
-        return self._cache_registry.get(memory, None)
+    def store_cdata(self, cdata_entry: CDataMemMapEntry) -> None:
+        self._cache.update({cdata_entry.name: cdata_entry})
 
-    def store_cdata(
-        self, memory: Memory, cdata_entry: CDataMemMapEntry
-    ):
-        self._cache_registry[memory].update(
-            {cdata_entry.name: cdata_entry})
-
-    def find_cdata_by_name(
-        self, memory: Memory, name: str
-    ) -> Union[CDataMemMapEntry, None]:
-        if cache_entry := self._cache_registry.get(memory):
-            return cache_entry.get(name, None)
+    def get_cdata_by_name(self, name: str) -> Optional[CDataMemMapEntry]:
+        if cache_entry := self._cache.get(name):
+            return cache_entry
 
 
 class CDataMemMapError(Exception):
@@ -87,18 +74,17 @@ class CDataMemMapper:
     def __init__(self, memory: Memory, ctypes_config: CTypesConfig):
         self._mem = memory
         self._cdata_mem_map_cache = CDataMemMapCache()
-        self._cdata_mem_map_cache.add_cache_entry(memory)
         self._ctypes_translator = CTypesTranslator(ctypes_config)
 
     @property
     def mem(self) -> Memory:
         return self._mem
 
-    def get_all_mapping(self) -> Union[Dict[str, CDataMemMapEntry], None]:
-        return self._cdata_mem_map_cache.get_cache_entry(self._mem)
+    def get_all_mapping(self) -> Optional[Dict[str, CDataMemMapEntry]]:
+        return self._cdata_mem_map_cache.get_all()
 
-    def get_cdata_mapping(self, name: str) -> Union[CDataMemMapEntry, None]:
-        return self._cdata_mem_map_cache.find_cdata_by_name(self._mem, name)
+    def get_cdata_by_name(self, name: str) -> Optional[CDataMemMapEntry]:
+        return self._cdata_mem_map_cache.get_cdata_by_name(name)
 
     def map_cdata(
         self, cdata_type_name: str, cdata_name: str, address: int
@@ -133,7 +119,7 @@ class CDataMemMapper:
             cdata.mem = self._mem
 
         map_entry = CDataMemMapEntry(address, cdata, cdata_name)
-        self._cdata_mem_map_cache.store_cdata(self._mem, map_entry)
+        self._cdata_mem_map_cache.store_cdata(map_entry)
         return cdata
 
     def map_cdata_from_file(self, filename: str):

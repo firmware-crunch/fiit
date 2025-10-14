@@ -21,6 +21,7 @@
 
 from typing import Any, Dict, cast, List
 
+from fiit.ctypesarch import CDataMemMapper
 from fiit.hooking import HookingEngine
 from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.utils import pkg_object_loader
@@ -29,7 +30,7 @@ from fiit.ftrace import (
     FUNC_TRACER_EXT_DIR, FUNC_TRACE_LOG_BIN, FUNC_TRACE_LOG_PYTHON
 )
 
-from . import CTX_REQ_HOOKING, CTX_FTRACER
+from . import CTX_REQ_HOOKING, CTX_FTRACER, CTX_REQ_CDATA
 
 
 def _get_filter_ext_conf_schema() -> dict:
@@ -61,6 +62,7 @@ def normalize_log_output_type(value: dict) -> int:
 class PluginFtrace(FiitPlugin):
     NAME = 'plugin_ftrace'
     REQUIREMENTS = [CTX_REQ_HOOKING]
+    OPTIONAL_REQUIREMENTS = [CTX_REQ_CDATA]
     OBJECTS_PROVIDED = [CTX_FTRACER]
     CONFIG_SCHEMA = {
         NAME: {
@@ -132,8 +134,12 @@ class PluginFtrace(FiitPlugin):
         optional_requirements: Dict[str, Any]
     ):
         tracer: List[Ftrace] = []
-        hook_engines = cast(List[HookingEngine],
-                            requirements[CTX_REQ_HOOKING.name])
+        hook_engines = cast(
+            List[HookingEngine], requirements[CTX_REQ_HOOKING.name]
+        )
+        cdata_mappers: List[CDataMemMapper] = optional_requirements.get(
+            CTX_REQ_CDATA.name, []
+        )
 
         for cpu_name, config in plugin_config.items():
             hook_engine_found = False
@@ -145,6 +151,11 @@ class PluginFtrace(FiitPlugin):
                         'hooking_engine': engine,
                         'plugin_context': plugins_context.context
                     }
+
+                    for cdata_mmap in cdata_mappers:
+                        if cdata_mmap.mem is engine.cpu.mem:
+                            data['cdata'] = cdata_mmap
+
                     ftracer = Ftrace(engine, **config, data=data)
                     tracer.append(ftracer)
                     hook_engine_found = True

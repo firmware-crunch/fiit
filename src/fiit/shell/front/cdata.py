@@ -42,7 +42,7 @@ class ShellCDataMemMapper:
         self._cdata_mmap = cdata_mem_mapper
 
     def __getattr__(self, name: str):
-        if cdata_entry := self._cdata_mmap.get_cdata_mapping(name):
+        if cdata_entry := self._cdata_mmap.get_cdata_by_name(name):
             return cdata_entry.cdata
         else:
             raise AttributeError(f'{name} attribute not found.')

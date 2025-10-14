@@ -24,7 +24,7 @@ import logging
 
 from fiit.machine import DeviceCpu
 from fiit.ctypesarch.defines import DataPointerBase
-from fiit.ctypesarch import CDataMemMapCache
+from fiit.ctypesarch import CDataMemMapper
 from fiit.hooking.engine import HookingContext
 from fiit.ftrace import FunctionFilterExtBase, LogFormatterExtBase
 
@@ -39,13 +39,15 @@ class FreeRtOsTaskCommon:
                 .split(b'\x00')[0].decode('ascii'))
 
     def save_px_current_tcb_cdata_mapping(self, ext_ctx: Dict[str, Any]):
-        cpu = cast(DeviceCpu, ext_ctx.get('cpu', None))
-        if cpu is None:
-            self._log.error(f'error: cpu not found in load extension context')
+        cdata = cast(CDataMemMapper, ext_ctx.get('cdata', None))
+
+        if cdata is None:
+            self._log.error(
+                'error: cdata memory mapper not found in load extension context'
+            )
             return
 
-        cdata_cache = CDataMemMapCache()
-        cdata_entry = cdata_cache.find_cdata_by_name(cpu.mem, 'pxCurrentTCB')
+        cdata_entry = cdata.get_cdata_by_name('pxCurrentTCB')
 
         if cdata_entry is None:
             self._log.error('px_current_tcb cdata binding not found in cache')
@@ -55,7 +57,7 @@ class FreeRtOsTaskCommon:
             self._px_current_tcb = cast(DataPointerBase, px_current_tcb)
             self._log.info(
                 f'%s found in C data memory map cache, mapped at %s',
-                cdata_entry.name, cpu.mem.addr_to_str(cdata_entry.address))
+                cdata_entry.name, cdata.mem.addr_to_str(cdata_entry.address))
 
 
 class FreeRTOSTaskFilterLogger(FunctionFilterExtBase, FreeRtOsTaskCommon):

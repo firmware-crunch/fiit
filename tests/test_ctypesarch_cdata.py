@@ -114,7 +114,7 @@ def test_map_cdata_to_invalid_region(minimal_memory):
         mem_mapper.map_cdata('unsigned int ', 'y', invalid_addr)
 
 
-def test_cache_find_cdata_by_name(minimal_memory):
+def test_get_cdata_by_name(minimal_memory):
     mem = minimal_memory
     region = mem.regions[0]
 
@@ -129,6 +129,6 @@ def test_cache_find_cdata_by_name(minimal_memory):
     mem_mapper.map_cdata(' unsigned   int ', 'xy',
                          region.base_address + raw_value_offset_1)
 
-    cdata_entry = CDataMemMapCache().find_cdata_by_name(mem, 'xy')
+    cdata_entry = mem_mapper.get_cdata_by_name('xy')
 
     assert cdata_entry.cdata.value == 0x01020304
