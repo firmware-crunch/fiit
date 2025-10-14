@@ -24,6 +24,6 @@ from .translator import (
     CTypesTranslator, CTypesTranslatorError,
     CTYPES_TRANSLATOR_FLAVOR, PYCPARSER, PYCPARSEREXT_GNU
 )
-from .cdata_mmap import (
+from .cdata import (
     CDataMemMapper, CDataMemMapError, CDataMemMapEntry, CDataMemMapCache
 )
