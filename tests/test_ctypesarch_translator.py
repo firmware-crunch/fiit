@@ -25,10 +25,10 @@ import pytest
 
 from .fixtures.fixture_utils import temp_named_txt_file
 
-from fiit.arch_ctypes import (
+from fiit.ctypesarch import (
     configure_ctypes, CTypesConfig,
     CTypesTranslator, CTypesTranslatorError, PYCPARSEREXT_GNU)
-from fiit.arch_ctypes.base_types import (
+from fiit.ctypesarch.base_types import (
     DataPointerBase,
     CodePointerBase, ArgSpec, FunctionSpec,
     UnsignedInt,

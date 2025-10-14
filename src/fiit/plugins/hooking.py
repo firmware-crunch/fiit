@@ -22,7 +22,7 @@
 from typing import Any, Dict, cast, List
 
 from fiit.machine import Machine
-from fiit.arch_ctypes import CTYPES_TRANSLATOR_FLAVOR
+from fiit.ctypesarch import CTYPES_TRANSLATOR_FLAVOR
 from fiit.hooking.engine import HookingEngine
 from fiit.plugin import FiitPlugin, FiitPluginContext
 

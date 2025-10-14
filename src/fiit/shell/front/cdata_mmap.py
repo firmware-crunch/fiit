@@ -31,7 +31,7 @@ from IPython.core.magic_arguments import (
     argument, magic_arguments, parse_argstring
 )
 
-from fiit.arch_ctypes import CDataMemMapper, CDataMemMapEntry
+from fiit.ctypesarch import CDataMemMapper, CDataMemMapEntry
 from fiit.shell import register_alias, Shell
 
 # ==============================================================================

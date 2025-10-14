@@ -26,7 +26,7 @@ from typing import Any, Dict, Union, List, cast
 
 from ..machine import DeviceCpu
 from ..dev_utils import pkg_object_loader, inherits_from
-from ..arch_ctypes.base_types import (
+from ..ctypesarch.base_types import (
     CBaseType, DataPointerBase, CodePointerBase, IntegralType, FloatType,
     Char, Bool, _Bool
 )

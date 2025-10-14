@@ -25,10 +25,10 @@ from .fixtures.fixture_utils import (
     minimal_memory, minimal_memory_host, MinimalMemory
 )
 
-from fiit.arch_ctypes import (
+from fiit.ctypesarch import (
     configure_ctypes, CDataMemMapper, CDataMemMapError, CDataMemMapCache
 )
-from fiit.arch_ctypes.base_types import DataPointerBase, UnsignedInt
+from fiit.ctypesarch.base_types import DataPointerBase, UnsignedInt
 
 
 

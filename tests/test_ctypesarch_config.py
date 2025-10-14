@@ -22,9 +22,9 @@
 from typing import Tuple
 import ctypes
 
-from fiit.arch_ctypes import configure_ctypes, CTypesConfig
-from fiit.arch_ctypes.base_types import Void, UnsignedInt
-from fiit.arch_ctypes.arch_arm import HalfFloatCodecIeee754
+from fiit.ctypesarch import configure_ctypes, CTypesConfig
+from fiit.ctypesarch.base_types import Void, UnsignedInt
+from fiit.ctypesarch.arch_arm import HalfFloatCodecIeee754
 
 
 

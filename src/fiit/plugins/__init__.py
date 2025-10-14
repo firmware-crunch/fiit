@@ -44,7 +44,7 @@ from fiit.shell import Shell
 from fiit.plugin import ContextObject
 from fiit.machine import Machine
 from fiit.dbg import Debugger
-from fiit.arch_ctypes import CDataMemMapper
+from fiit.ctypesarch import CDataMemMapper
 from fiit.hooking.engine import HookingEngine
 from fiit.ftrace.ftrace import Ftrace
 from fiit.iotrace import MmioTracer, MmioDbg

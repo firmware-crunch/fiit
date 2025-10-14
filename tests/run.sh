@@ -52,11 +52,11 @@ test_dev_factory.py                                                            \
 test_dbg_dis_capstone.py                                                       \
 test_dbg_uc.py                                                                 \
                                                                                \
-test_arch_ctypes_arch_arm.py                                                   \
-test_arch_ctypes_base_types.py                                                 \
-test_arch_ctypes_cdata_mmap.py                                                 \
-test_arch_ctypes_config.py                                                     \
-test_arch_ctypes_translator.py                                                 \
+test_ctypesarch_arch_arm.py                                                    \
+test_ctypesarch_base_types.py                                                  \
+test_ctypesarch_cdata_mmap.py                                                  \
+test_ctypesarch_config.py                                                      \
+test_ctypesarch_translator.py                                                  \
                                                                                \
 test_iotrace_mmio_filter.py                                                    \
                                                                                \

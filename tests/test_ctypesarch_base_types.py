@@ -27,8 +27,8 @@ import pytest
 
 from .fixtures.fixture_utils import minimal_memory, minimal_memory_host
 
-from fiit.arch_ctypes import configure_ctypes
-from fiit.arch_ctypes.base_types import (
+from fiit.ctypesarch import configure_ctypes
+from fiit.ctypesarch.base_types import (
     array_eq,
     CBaseType,
     DataPointerBase,

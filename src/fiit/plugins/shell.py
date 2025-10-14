@@ -26,7 +26,7 @@ __all__ = [
 from typing import Optional, Dict, Any, Union, cast, List
 
 from fiit.dbg import Debugger
-from fiit.arch_ctypes.cdata_mmap import CDataMemMapper
+from fiit.ctypesarch.cdata_mmap import CDataMemMapper
 from fiit.iotrace import MmioTracer, MmioDbg
 from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.shell import Shell

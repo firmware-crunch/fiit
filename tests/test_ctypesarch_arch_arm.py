@@ -19,8 +19,8 @@
 #
 ################################################################################
 
-from fiit.arch_ctypes import configure_ctypes
-from fiit.arch_ctypes.arch_arm import Fp16, HalfFloatCodecIeee754
+from fiit.ctypesarch import configure_ctypes
+from fiit.ctypesarch.arch_arm import Fp16, HalfFloatCodecIeee754
 
 
 # HalfFloatCodecIeee754

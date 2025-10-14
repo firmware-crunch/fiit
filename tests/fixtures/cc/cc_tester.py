@@ -24,9 +24,9 @@ import copy
 
 from fiit.machine import DeviceCpu
 from fiit.hooking.cc import CallingConvention
-from fiit.arch_ctypes.config import configure_ctypes
-from fiit.arch_ctypes.translator import CTypesTranslator
-from fiit.arch_ctypes.base_types import (
+from fiit.ctypesarch.config import configure_ctypes
+from fiit.ctypesarch.translator import CTypesTranslator
+from fiit.ctypesarch.base_types import (
     DataPointerBase,
     CBaseType,
     FundBaseType,

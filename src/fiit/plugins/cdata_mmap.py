@@ -27,7 +27,7 @@ from typing import Dict, Any, cast, List
 
 from fiit.plugin import FiitPlugin, FiitPluginContext
 from fiit.machine import Machine
-from fiit.arch_ctypes import (
+from fiit.ctypesarch import (
     configure_ctypes, CTypesTranslator, CDataMemMapper, CTYPES_TRANSLATOR_FLAVOR
 )
 
