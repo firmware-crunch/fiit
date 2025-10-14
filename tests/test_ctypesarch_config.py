@@ -23,7 +23,7 @@ from typing import Tuple
 import ctypes
 
 from fiit.ctypesarch import configure_ctypes, CTypesConfig
-from fiit.ctypesarch.base_types import Void, UnsignedInt
+from fiit.ctypesarch.defines import Void, UnsignedInt
 from fiit.ctypesarch.arch_arm import HalfFloatCodecIeee754
 
 

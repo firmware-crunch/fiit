@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, Literal, List, Union, Callable
 
 from fiit.machine import DeviceCpu
-from fiit.ctypesarch.base_types import FunctionSpec
+from fiit.ctypesarch.defines import FunctionSpec
 
 from .cc import CpuContext
 

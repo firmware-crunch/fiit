@@ -53,7 +53,7 @@ test_dbg_dis_capstone.py                                                       \
 test_dbg_uc.py                                                                 \
                                                                                \
 test_ctypesarch_arch_arm.py                                                    \
-test_ctypesarch_base_types.py                                                  \
+test_ctypesarch_defines.py                                                     \
 test_ctypesarch_cdata_mmap.py                                                  \
 test_ctypesarch_config.py                                                      \
 test_ctypesarch_translator.py                                                  \

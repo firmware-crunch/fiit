@@ -28,7 +28,7 @@ from .fixtures.fixture_utils import temp_named_txt_file
 from fiit.ctypesarch import (
     configure_ctypes, CTypesConfig,
     CTypesTranslator, CTypesTranslatorError, PYCPARSEREXT_GNU)
-from fiit.ctypesarch.base_types import (
+from fiit.ctypesarch.defines import (
     DataPointerBase,
     CodePointerBase, ArgSpec, FunctionSpec,
     UnsignedInt,

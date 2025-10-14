@@ -28,7 +28,7 @@ from fiit.emunicorn import CpuUnicorn
 from fiit.config_loader import ConfigLoader
 from fiit.dev_utils import pkg_module_object_loader
 from fiit.ctypesarch import configure_ctypes, CTypesTranslator, PYCPARSER
-from fiit.ctypesarch.base_types import FunctionSpec, ArgSpec
+from fiit.ctypesarch.defines import FunctionSpec, ArgSpec
 
 from .cc import get_calling_convention_by_arch, get_calling_convention_by_name
 from .defines import (

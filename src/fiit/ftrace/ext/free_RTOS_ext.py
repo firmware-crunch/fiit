@@ -23,7 +23,7 @@ from typing import Dict, Any, Optional, cast, List
 import logging
 
 from fiit.machine import DeviceCpu
-from fiit.ctypesarch.base_types import DataPointerBase
+from fiit.ctypesarch.defines import DataPointerBase
 from fiit.ctypesarch import CDataMemMapCache
 from fiit.hooking.engine import HookingContext
 from fiit.ftrace import FunctionFilterExtBase, LogFormatterExtBase

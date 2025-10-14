@@ -27,7 +27,7 @@ from ..dev_utils import SingletonPattern
 from ..config_loader import ConfigLoader
 from ..machine import Memory
 
-from .base_types import CBaseType, DataPointerBase, mem_sync_ctypes_factory
+from .defines import CBaseType, DataPointerBase, mem_sync_ctypes_factory
 from .config import CTypesConfig
 from .translator import CTypesTranslator
 

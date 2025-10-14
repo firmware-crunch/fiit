@@ -23,8 +23,8 @@ import ctypes
 import struct
 from typing import Literal, cast, Type
 
-from .base_types import FACTORY_TYPE, BASIC_TYPE, EXTRA_TYPE
-from .base_types import (
+from .defines import FACTORY_TYPE, BASIC_TYPE, EXTRA_TYPE
+from .defines import (
     DataPointerBase, CodePointerBase, Enum, Void, Char, SignedChar,
     UnsignedChar, Short, ShortInt, SignedShort, SignedShortInt,
     UnsignedShortInt, UnsignedShort, Int, Signed, SignedInt, UnsignedInt,

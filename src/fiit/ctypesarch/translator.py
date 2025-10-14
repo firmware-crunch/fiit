@@ -30,7 +30,7 @@ import pycparserext.ext_c_parser
 import pycparserext
 
 from .config import CTypesConfig
-from .base_types import (
+from .defines import (
     CBaseType, DataPointerBase, CodePointerBase, Enum,
     FunctionSpec, ArgSpec, Void, Struct
 )

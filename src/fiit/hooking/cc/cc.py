@@ -23,7 +23,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Union, Callable, ClassVar
 
 from fiit.machine import DeviceCpu, Memory, CpuRegisters
-from fiit.ctypesarch.base_types import CBaseType, FunctionSpec
+from fiit.ctypesarch.defines import CBaseType, FunctionSpec
 
 
 class CpuContext:

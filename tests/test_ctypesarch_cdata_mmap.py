@@ -28,7 +28,7 @@ from .fixtures.fixture_utils import (
 from fiit.ctypesarch import (
     configure_ctypes, CDataMemMapper, CDataMemMapError, CDataMemMapCache
 )
-from fiit.ctypesarch.base_types import DataPointerBase, UnsignedInt
+from fiit.ctypesarch.defines import DataPointerBase, UnsignedInt
 
 
 
