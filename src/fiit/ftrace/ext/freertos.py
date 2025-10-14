@@ -74,9 +74,14 @@ class FreeRTOSTaskFilterLogger(FunctionFilterExtBase, FreeRtOsTaskCommon):
     def __init__(self):
         self._filtered_task_names: Optional[List[str]] = None
         self._px_current_tcb: Optional[DataPointerBase] = None
-        self._log = logging.getLogger(f'{self.FILTER_NAME}')
+        self._log: Optional[logging.Logger] = None
 
     def filter_ext_load(self, ext_ctx: Dict[str, Any], ext_config: dict):
+        cpu = cast(DeviceCpu, ext_ctx.get('cpu', None))
+        log_base = 'fiit.ftrace.ext.freertos.task_filter'
+        log_name = log_base if cpu is None else f'{log_base}.dev@{cpu.dev_name}'
+        self._log = logging.getLogger(log_name)
+
         self._filtered_task_names = ext_config['task_names']
         self.save_px_current_tcb_cdata_mapping(ext_ctx)
 
@@ -95,9 +100,14 @@ class FreeRTOSTaskLogFormatter(LogFormatterExtBase, FreeRtOsTaskCommon):
 
     def __init__(self):
         self._px_current_tcb: Optional[DataPointerBase] = None
-        self._log = logging.getLogger(f'{self.FORMATTER_NAME}')
+        self._cpu: Optional[DeviceCpu] = None
+        self._log: Optional[logging.Logger] = None
 
     def formatter_ext_load(self, ext_ctx: Dict[str, Any], ext_config: dict):
+        cpu = cast(DeviceCpu, ext_ctx.get('cpu', None))
+        log_base = 'fiit.ftrace.ext.freertos.ctx_fmt'
+        log_name = log_base if cpu is None else f'{log_base}.dev@{cpu.dev_name}'
+        self._log = logging.getLogger(log_name)
         self.save_px_current_tcb_cdata_mapping(ext_ctx)
 
     def ext_python_log(self, ctx: HookingContext, log: str) -> str:
