@@ -29,7 +29,7 @@ import inspect
 from dataclasses import dataclass
 import graphlib
 
-from .utils import pkg_object_loader, inherits_from
+from .utils import pkg_object_loader
 from .config import ConfigLoader
 
 
@@ -132,9 +132,12 @@ class PluginManager:
 
     @staticmethod
     def is_fiit_plugin(obj: Any):
-        return (
-            True if inspect.isclass(obj) and inherits_from(obj, FiitPlugin)
-            else False)
+        is_fiit_plugin_impl = (
+            inspect.isclass(obj)
+            and issubclass(obj, FiitPlugin)
+            and obj is not FiitPlugin
+        )
+        return is_fiit_plugin_impl
 
     @classmethod
     def _find_builtin_plugins(cls) -> List[Type[FiitPlugin]]:

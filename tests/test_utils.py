@@ -24,24 +24,7 @@ import textwrap
 import tempfile
 import inspect
 
-from fiit.utils import inherits_from, pkg_module_object_loader
-
-
-def test_inherits_from():
-    class Foo:
-        pass
-
-    class Bar(Foo):
-        pass
-
-    assert inherits_from(Bar, Foo)
-
-
-def test_inherits_from_not():
-    class Foo:
-        pass
-
-    assert not inherits_from(Foo, Foo)
+from fiit.utils import pkg_module_object_loader
 
 
 def test_import_object_from_py_file():

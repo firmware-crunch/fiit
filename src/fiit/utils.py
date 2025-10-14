@@ -22,17 +22,8 @@
 from typing import Any, List, Callable, Type
 import os
 import importlib.util
-import inspect
 import pathlib
 import sys
-
-
-# FIXME: Dirty inheritance check to remove
-def inherits_from(obj: Any, parent: Type[Any]) -> bool:
-    if inspect.isclass(obj):
-        if parent.__name__ in [c.__name__ for c in inspect.getmro(obj)[1:]]:
-            return True
-    return False
 
 
 def pkg_module_object_loader(

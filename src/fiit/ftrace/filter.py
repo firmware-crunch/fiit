@@ -23,7 +23,7 @@ import inspect
 import os
 from typing import Any, Dict, List, cast
 
-from fiit.utils import pkg_object_loader, inherits_from
+from fiit.utils import pkg_object_loader
 from fiit.hooking.engine import HookingContext
 
 
@@ -39,9 +39,12 @@ class FunctionFilterExtBase:
 
 
 def predicate_is_func_trace_ext(obj: any) -> bool:
-    return (True if (inspect.isclass(obj)
-                     and inherits_from(obj, FunctionFilterExtBase))
-            else False)
+    is_func_trace_ext_impl = (
+        inspect.isclass(obj)
+        and issubclass(obj, FunctionFilterExtBase)
+        and obj is not FunctionFilterExtBase
+    )
+    return is_func_trace_ext_impl
 
 
 class FilterExt:

@@ -25,7 +25,7 @@ import os
 from typing import Any, Dict, Union, List, cast
 
 from fiit.machine import DeviceCpu
-from fiit.utils import pkg_object_loader, inherits_from
+from fiit.utils import pkg_object_loader
 from fiit.ctypesarch.defines import (
     CBaseType, DataPointerBase, CodePointerBase, IntegralType, FloatType,
     Char, Bool, _Bool
@@ -46,9 +46,12 @@ class LogFormatterExtBase:
 
 
 def predicate_is_log_format_ext(obj: any) -> bool:
-    return (True if (inspect.isclass(obj)
-                     and inherits_from(obj, LogFormatterExtBase))
-            else False)
+    is_log_fmt_impl = (
+        inspect.isclass(obj)
+        and issubclass(obj, LogFormatterExtBase)
+        and obj is not LogFormatterExtBase
+    )
+    return is_log_fmt_impl
 
 
 class FtraceLogFormatter:
