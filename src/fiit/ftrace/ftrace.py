@@ -28,7 +28,7 @@ from ..hooking.engine import (
     HookingEngine, FuncHookMeta, HookingContext
 )
 
-from .log_formatter import FtraceLogFormatter
+from .logfmt import FtraceLogFormatter
 from .filter import FunctionRuntimeFilter
 
 FUNC_TRACER_EXT_DIR = os.path.abspath(

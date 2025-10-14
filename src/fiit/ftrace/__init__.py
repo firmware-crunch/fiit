@@ -19,7 +19,7 @@
 #
 ################################################################################
 
-from .log_formatter import predicate_is_log_format_ext, LogFormatterExtBase
+from .logfmt import predicate_is_log_format_ext, LogFormatterExtBase
 from .filter import predicate_is_func_trace_ext, FunctionFilterExtBase
 from .ftrace import (
     Ftrace, FUNC_TRACER_EXT_DIR, FUNC_TRACE_LOG_BIN, FUNC_TRACE_LOG_PYTHON
