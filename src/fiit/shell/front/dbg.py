@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 import sys
-from typing import Optional, Tuple, List
+from typing import Optional, List
 
 import tabulate
 
@@ -35,7 +35,8 @@ from IPython.core.magic_arguments import (
 )
 
 from fiit.dbg import (
-    Debugger, DBG_EVENT_STEP, DBG_EVENT_WATCHPOINT, DBG_EVENT_BREAKPOINT
+    Debugger, DbgEventBase, WatchpointAccess, DbgEventWatchpoint,
+    DbgEventBreakpoint, DbgEventStepInst, BreakpointType, WatchpointType
 )
 
 from ..shell import Shell, register_alias
@@ -49,16 +50,16 @@ class DbgFrontend(IPython.core.magic.Magics):
         self.dbg_list = dbg_list
 
         if len(self.dbg_list) == 0:
-            raise RuntimeError('Debugger instance not found')
+            raise RuntimeError('debugger instance not found')
 
         self.dbg: Debugger = self.dbg_list[0]
 
         for dbg in self.dbg_list:
             dbg.add_event_callback(self.debug_event_callback)
 
-        self._current_event: Optional[Tuple[int, dict]] = None
+        self._current_event: Optional[DbgEventBase] = None
 
-        super(DbgFrontend, self).__init__(shell=shell.shell)
+        super().__init__(shell=shell.shell)
 
         self._shell = shell
         shell.register_magics(self)
@@ -68,16 +69,14 @@ class DbgFrontend(IPython.core.magic.Magics):
             shell.stream_logger_to_shell_stdout(dbg.logger_name)
 
     _DBG_BREAK_EVENT = [
-        DBG_EVENT_BREAKPOINT,
-        DBG_EVENT_WATCHPOINT,
-        DBG_EVENT_STEP
+        DbgEventWatchpoint, DbgEventBreakpoint, DbgEventStepInst
     ]
 
     def debug_event_callback(
-        self, _: Debugger, event: int, args: dict
-    ):
-        if event in self._DBG_BREAK_EVENT:
-            self._current_event = (event, args)
+        self, _: Debugger, event: DbgEventBase,
+    ) -> None:
+        if event.__class__ in self._DBG_BREAK_EVENT:
+            self._current_event = event
             self._shell.resume()
             self._shell.wait_for_prompt_suspend()
             self._current_event = None
@@ -104,7 +103,7 @@ class DbgFrontend(IPython.core.magic.Magics):
 
     @register_alias('cs')
     @IPython.core.magic.line_magic
-    def cpu_switch(self, line: str):
+    def cpu_switch(self, line: str) -> None:
         """Switch debugger"""
         for dbg in self.dbg_list:
             if dbg.cpu.dev_name == line:
@@ -118,7 +117,7 @@ class DbgFrontend(IPython.core.magic.Magics):
 
     @register_alias('c')
     @IPython.core.magic.line_magic
-    def cont(self, _: str):
+    def cont(self, _: str) -> None:
         """Continue emulation"""
         if self._current_event is not None:
             self._shell.suspend()
@@ -127,10 +126,10 @@ class DbgFrontend(IPython.core.magic.Magics):
 
     @register_alias('s')
     @IPython.core.magic.line_magic
-    def step(self, _: str):
+    def step(self, _: str) -> None:
         """Steps to the next instruction"""
         if self._current_event is not None:
-            self.dbg.set_step()
+            self.dbg.set_step_inst()
             self._shell.suspend()
         else:
             print('Emulation is not started.')
@@ -140,7 +139,7 @@ class DbgFrontend(IPython.core.magic.Magics):
               help='CPU Register name(s) to dump.')
     @register_alias('rg')
     @IPython.core.magic.line_magic
-    def register_get(self, line: str):
+    def register_get(self, line: str) -> None:
         """Get CPU register(s)"""
         args = parse_argstring(self.register_get, line)
 
@@ -161,15 +160,14 @@ class DbgFrontend(IPython.core.magic.Magics):
             reg_value_str = self.dbg.mem.addr_to_str(reg_value)
             out.append(fmt(reg, reg_value_str))
 
-        out = ''.join(out)
-        sys.stdout.write(out)
+        sys.stdout.write(''.join(out))
 
     @magic_arguments()
     @argument('register', help='CPU Register name to set.')
     @argument('value', help='Hexadecimal value to set.')
     @register_alias('rs')
     @IPython.core.magic.line_magic
-    def register_set(self, line: str):
+    def register_set(self, line: str) -> None:
         """Set CPU register"""
         args = parse_argstring(self.register_set, line)
         self.dbg.regs.write(args.register, int(args.value, 16))
@@ -180,7 +178,7 @@ class DbgFrontend(IPython.core.magic.Magics):
               help='Number of instruction to disassemble, default 1.')
     @register_alias('dis')
     @IPython.core.magic.line_magic
-    def disassemble(self, line: str):
+    def disassemble(self, line: str) -> None:
         """Disassemble memory"""
         args = parse_argstring(self.disassemble, line)
         addr = int(args.address, 16)
@@ -193,7 +191,7 @@ class DbgFrontend(IPython.core.magic.Magics):
               help='Memory size to read in byte. (default 256)')
     @register_alias('mr')
     @IPython.core.magic.line_magic
-    def mem_read(self, line: str):
+    def mem_read(self, line: str) -> None:
         """Read Memory"""
         args = parse_argstring(self.mem_read, line)
         addr = int(args.address, 16)
@@ -205,7 +203,7 @@ class DbgFrontend(IPython.core.magic.Magics):
     @argument('value', help='Value to write.')
     @register_alias('mw')
     @IPython.core.magic.line_magic
-    def mem_write(self, line: str):
+    def mem_write(self, line: str) -> None:
         """Write Memory"""
         args = parse_argstring(self.mem_write, line)
         addr = int(args.address, 16)
@@ -219,29 +217,34 @@ class DbgFrontend(IPython.core.magic.Magics):
     @argument('count', nargs='?', type=int, default=0,
               help='Hit count before delete breakpoint, '
                    'if 0 the breakpoint is never deleted.')
-    @register_alias('bps')
+    @register_alias('bp')
     @IPython.core.magic.line_magic
-    def breakpoint_set(self, line: str):
-        """Set breakpoint"""
-        args = parse_argstring(self.breakpoint_set, line)
-        self.dbg.breakpoint_set(int(args.address, 16), int(args.count))
+    def break_add(self, line: str) -> None:
+        """Add breakpoint"""
+        args = parse_argstring(self.break_add, line)
+        address = int(args.address, 16)
+        self.dbg.breakpoint_add(address, BreakpointType.OOB)
 
     @magic_arguments()
     @argument('index', type=int, help='Breakpoint Index')
     @register_alias('bpd')
     @IPython.core.magic.line_magic
-    def breakpoint_del(self, line: str):
+    def break_del(self, line: str) -> None:
         """Delete breakpoint"""
-        args = parse_argstring(self.breakpoint_del, line)
+        args = parse_argstring(self.break_del, line)
         self.dbg.breakpoint_del_by_index(args.index)
 
     @IPython.core.magic.line_magic
     @register_alias('bpp')
-    def breakpoint_print(self, _: str):
-        """Print breakpoint"""
+    def break_print(self, _: str) -> None:
+        """Print breakpoints"""
         headers = ['index', 'address', 'hit']
-        table = [[idx+1, self.dbg.mem.addr_to_str(b.address), b.hit_count]
-                 for idx, b in enumerate(self.dbg.breakpoint_get())]
+        table = []
+
+        for idx, b in enumerate(self.dbg.breakpoints):
+            line = [idx+1, self.dbg.mem.addr_to_str(b.address), b.hit_count]
+            table.append(line)
+
         out = tabulate.tabulate(table, headers, tablefmt="simple")
         print(out)
 
@@ -250,49 +253,53 @@ class DbgFrontend(IPython.core.magic.Magics):
     @argument('begin', help='Start address of the memory area to monitor '
               'access')
     @argument('end', help='End address of the memory area to monitor access')
-    @argument('count', nargs='?', type=int, default=0,
-              help='Hit count before delete watchpoint, '
-                   'if 0 the watchpoint is never deleted. (default=0)')
     @register_alias('wpa')
     @IPython.core.magic.line_magic
-    def watchpoint_area(self, line: str):
-        """Set watchpoint on memory area access"""
-        args = parse_argstring(self.watchpoint_area, line)
+    def watch_area(self, line: str) -> None:
+        """Add watchpoint on memory area access"""
+        args = parse_argstring(self.watch_area, line)
         begin, end = int(args.begin, 16), int(args.end, 16)
-        count = int(args.count)
-        self.dbg.watchpoint_set(begin, end, args.access, count)
+        access = WatchpointAccess.from_str(args.access)
+        self.dbg.watchpoint_add(begin, end, access, WatchpointType.OOB)
 
     @magic_arguments()
     @argument('access', choices=['r', 'w', 'rw'], help='Access type to monitor')
     @argument('address', help='Address of the variable to monitor')
-    @argument('count', nargs='?', type=int, default=0,
-              help='Hit count before delete watchpoint, '
-                   'if 0 the watchpoint is never deleted. (default=0)')
     @register_alias('wpv')
     @IPython.core.magic.line_magic
-    def watchpoint_var(self, line: str):
-        """Set watchpoint on variable access"""
-        args = parse_argstring(self.watchpoint_var, line)
+    def watch_var(self, line: str) -> None:
+        """Add watchpoint on variable access"""
+        args = parse_argstring(self.watch_var, line)
         address = int(args.address, 16)
-        count = int(args.count)
-        self.dbg.watchpoint_set(address, address, args.access, count)
+        access = WatchpointAccess.from_str(args.access)
+        watch_type = WatchpointType.OOB
+        self.dbg.watchpoint_add(address, address, access, watch_type)
 
     @magic_arguments()
     @argument('index', type=int, help='Watchpoint index')
     @register_alias('wpd')
     @IPython.core.magic.line_magic
-    def watchpoint_del(self, line: str):
+    def watch_del(self, line: str) -> None:
         """Delete watchpoint"""
-        args = parse_argstring(self.watchpoint_del, line)
+        args = parse_argstring(self.watch_del, line)
         self.dbg.watchpoint_del_by_index(args.index)
 
     @register_alias('wpp')
     @IPython.core.magic.line_magic
-    def watchpoint_print(self, _: str):
-        """Print watchpoint"""
+    def watch_print(self, _: str) -> None:
+        """Print watchpoints"""
         headers = ['index', 'begin', 'end', 'access', 'hit']
-        table = [[idx+1, self.dbg.mem.addr_to_str(w.begin),
-                  self.dbg.mem.addr_to_str(w.end), w.access, w.hit_count]
-                 for idx, w in enumerate(self.dbg.watchpoint_get())]
+        table = []
+
+        for idx, w in enumerate(self.dbg.watchpoints):
+            table_line = [
+                idx + 1,
+                self.dbg.mem.addr_to_str(w.begin),
+                self.dbg.mem.addr_to_str(w.end),
+                w.access.label_unix,
+                w.hit_count
+            ]
+            table.append(table_line)
+
         out = tabulate.tabulate(table, headers, tablefmt="simple")
         print(out)

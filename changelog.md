@@ -10,6 +10,7 @@ This file details the changelog of fiit.
 
 ### Added
 
+- Add new debugger API for advanced debugger scripting in pure Python
 - Add `machine` subpackage that provides an abstraction for machine, devices and cpu
 - Add `dev` subpackage that provides reusable devices over the `machine` abstraction
 - Add `emunicorn` subpackage that implements access to emulated Unicorn cpu

@@ -37,6 +37,11 @@ test_machine_registers.py                                                      \
 test_machine_cpu.py                                                            \
 test_machine_machine.py                                                        \
                                                                                \
+test_dbg_disasm.py                                                             \
+test_dbg_defines.py                                                            \
+test_dbg_dbg.py                                                                \
+test_dbg_factory.py                                                            \
+                                                                               \
 test_emunicorn_registers.py                                                    \
 test_emunicorn_memory.py                                                       \
 test_emunicorn_cpu.py                                                          \
@@ -44,13 +49,11 @@ test_emunicorn_fix.py                                                          \
 test_emunicorn_arm32_coproc.py                                                 \
 test_emunicorn_arm32_cpu.py                                                    \
 test_emunicorn_factory.py                                                      \
+test_emunicorn_dbg.py                                                          \
                                                                                \
 test_dev_arm32.py                                                              \
 test_dev_pl190.py                                                              \
 test_dev_factory.py                                                            \
-                                                                               \
-test_dbg_disasm.py                                                             \
-test_dbg_uc.py                                                                 \
                                                                                \
 test_ctypesarch_arch_arm32.py                                                  \
 test_ctypesarch_defines.py                                                     \

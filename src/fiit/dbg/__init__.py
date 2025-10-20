@@ -20,54 +20,80 @@
 ################################################################################
 
 __all__ = [
-    'Breakpoint',
-    'Watchpoint',
-    'DBG_EVENT_SEGFAULT',
-    'DBG_EVENT_BREAKPOINT',
-    'DBG_EVENT_WATCHPOINT',
-    'DBG_EVENT_STEP',
     'DebugEventCallback',
     'Debugger',
-    'DebuggerUnicorn',
-    'DebuggerFactory'
+    'BreakpointBase',
+
+    'BreakpointType',
+    'Breakpoint',
+    'BreakpointOOB',
+
+    'WatchpointAccess',
+    'Watchpoint',
+    'WatchpointType',
+    'WatchpointReadOOB',
+    'WatchpointWriteOOB',
+    'WatchpointRwOOB',
+
+    'DbgEventBase',
+    'DbgEventStartProgram',
+    'DbgEventContinue',
+    'DbgEventStopType',
+    'DbgEventStop',
+    'DbgEventBreakpoint',
+    'DbgEventWatchpointAccess',
+    'DbgEventWatchpoint',
+    'DbgEventStepInst',
+    'DbgEventMemFetchUnmapped',
+    'DbgEventMemAccessUnmapped',
+    'DbgEventMemWriteUnmapped',
+    'DbgEventMemWrite',
+    'DbgEventMemReadUnmapped',
+    'DbgEventBreakpointCreated',
+    'DbgEventBreakpointDeleted',
+    'DbgEventBreakpointChanged',
+    'DbgEventRegisterWrite',
+
+    'BreakpointCondition',
+    'BreakpointHitCb',
+    'BreakpointInvalidateCb'
 ]
 
-from typing import (
-    Optional,
-    List,
-    Type
-)
+from .dbg import DebugEventCallback, Debugger
+from .defines import (
+    BreakpointBase,
 
-from ..machine import DeviceCpu
-
-from .dbg import (
+    BreakpointType,
     Breakpoint,
+    BreakpointOOB,
+
+    WatchpointAccess,
+    WatchpointType,
     Watchpoint,
-    DBG_EVENT_SEGFAULT,
-    DBG_EVENT_BREAKPOINT,
-    DBG_EVENT_WATCHPOINT,
-    DBG_EVENT_STEP,
-    DebugEventCallback,
-    Debugger
+    WatchpointReadOOB,
+    WatchpointWriteOOB,
+    WatchpointRwOOB,
+
+    DbgEventBase,
+    DbgEventStartProgram,
+    DbgEventContinue,
+    DbgEventStopType,
+    DbgEventStop,
+    DbgEventBreakpoint,
+    DbgEventWatchpointAccess,
+    DbgEventWatchpoint,
+    DbgEventStepInst,
+    DbgEventMemFetchUnmapped,
+    DbgEventMemAccessUnmapped,
+    DbgEventMemWriteUnmapped,
+    DbgEventMemWrite,
+    DbgEventMemReadUnmapped,
+    DbgEventBreakpointCreated,
+    DbgEventBreakpointDeleted,
+    DbgEventBreakpointChanged,
+    DbgEventRegisterWrite,
+
+    BreakpointCondition,
+    BreakpointHitCb,
+    BreakpointInvalidateCb
 )
-
-from .uc import DebuggerUnicorn
-
-# ==============================================================================
-
-
-class DebuggerFactory:
-
-    _DEBUGGERS: List[Type[Debugger]] = [
-        DebuggerUnicorn  # Add debugger backend here ...
-    ]
-
-    @classmethod
-    def get(
-        cls, cpu: DeviceCpu, event_callback: Optional[DebugEventCallback] = None
-    ) -> Debugger:
-        for backend_class in cls._DEBUGGERS:
-            if isinstance(cpu.cpu, backend_class.CPU_CLASS):
-                return backend_class(cpu, event_callback)
-
-        raise ValueError(f'Debugger backend not found for cpu "{cpu}"')

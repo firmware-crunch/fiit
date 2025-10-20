@@ -20,83 +20,60 @@
 ################################################################################
 
 __all__ = [
-    'Breakpoint',
-    'Watchpoint',
-
-    'DBG_EVENT_SEGFAULT',
-    'DBG_EVENT_BREAKPOINT',
-    'DBG_EVENT_WATCHPOINT',
-    'DBG_EVENT_STEP',
-
     'DebugEventCallback',
     'Debugger'
 ]
 
 import abc
 import logging
-import dataclasses
-from typing import Literal, List, Callable, ClassVar, Type, Dict, Any, Optional
+from typing import List, Callable, ClassVar, Type, Optional, Union, Tuple
 
-from ..machine import Cpu, DeviceCpu
+from fiit.machine import Cpu, DeviceCpu
 
 from .disasm import DisassemblerCapstone
+from .defines import (
+    BreakpointCondition,
+    BreakpointHitCb,
+    DbgEventBase,
+    Breakpoint,
+    BreakpointType,
+    WatchpointAccess,
+    WatchpointType,
+    Watchpoint,
+    DbgEventMemWrite,
+    DbgEventRegisterWrite,
+)
 
 # ==============================================================================
 
 
-@dataclasses.dataclass
-class Breakpoint:
-    address: int
-    count: int
-    hit_count: int = 0
-
-
-@dataclasses.dataclass
-class Watchpoint:
-    begin: int
-    end: int
-    access: str
-    count: int = 0
-    hit_count: int = 0
-
-
-DBG_EVENT_SEGFAULT = 1
-DBG_EVENT_BREAKPOINT = 2
-DBG_EVENT_WATCHPOINT = 3
-DBG_EVENT_STEP = 4
-
-
-DebugEventCallback = Callable[['Debugger', int, Dict[Any, Any]], None]
+DebugEventCallback = Callable[['Debugger', DbgEventBase], None]
 
 
 class Debugger(abc.ABC):
 
     CPU_CLASS: ClassVar[Type[Cpu]]
 
-    def __init__(
-        self,
-        cpu: DeviceCpu,
-        event_callback: Optional[DebugEventCallback] = None
-    ):
+    def __init__(self, cpu: DeviceCpu):
         self._logger_name = f'fiit.dbg@{cpu.dev_name}'
         self._logger = logging.getLogger(self._logger_name)
-        self.dev_str = f'dev@{cpu.dev_name}'
+
         self.cpu = cpu
         self.mem = self.cpu.mem
         self.regs = self.cpu.regs
 
+        self._event_sequence_number = 0
         self.debug_event_callbacks: List[DebugEventCallback] = []
 
-        if event_callback is not None:
-            self.add_event_callback(event_callback)
-
         dis_arch_str = (
-            f'{self.cpu.ARCH_NAME}'
-            f':{self.cpu.endian.label_hc_lc}'
-            f':{self.cpu.bits.value}'
-            f':default'
+            f'{self.cpu.ARCH_NAME}:{self.cpu.endian.label_hc_lc}'
+            f':{self.cpu.bits.value}:default'
         )
         self._disassembler = DisassemblerCapstone(dis_arch_str)
+
+    @property
+    def dev_name(self) -> str:
+        return f'dev@{self.cpu.dev_name}'
 
     @property
     def logger_name(self) -> str:
@@ -109,9 +86,91 @@ class Debugger(abc.ABC):
     def add_event_callback(self, event_callback: DebugEventCallback) -> None:
         self.debug_event_callbacks.append(event_callback)
 
-    def debug_event_callback(self, event_id: int, args: Dict[Any, Any]) -> None:
+    def trigger_event(self, event: DbgEventBase) -> None:
+        self._event_sequence_number += 1
+        event.seq = self._event_sequence_number
+        event.dbg = self
+        event.arch_bits = self.cpu.bits
+        self._logger.info(str(event))
+
         for callback in self.debug_event_callbacks:
-            callback(self, event_id, args)
+            callback(self, event)
+
+    def mem_write(self, address: int, data: bytes) -> int:
+        length = self.mem.write(address, data)
+        event = DbgEventMemWrite(address, len(data))
+        self.trigger_event(event)
+        return length
+
+    def reg_write(self, register: str, value: int) -> None:
+        self.regs.write(register, value)
+        event = DbgEventRegisterWrite(register, value)
+        self.trigger_event(event)
+
+    # --------------------------------------------------------------------------
+    # breakpoint interface
+
+    @abc.abstractmethod
+    def set_step_inst(self) -> None:
+        """ """
+
+    @property
+    @abc.abstractmethod
+    def breakpoints(self) -> List[Breakpoint]:
+        """ """
+
+    @abc.abstractmethod
+    def breakpoint_add(
+        self,
+        address: int,
+        breakpoint_type: BreakpointType,
+        condition: Optional[BreakpointCondition] = None,
+        hit_callback: Optional[BreakpointHitCb] = None
+    ) -> Breakpoint:
+        """ """
+
+    @abc.abstractmethod
+    def breakpoint_del(self, bp: Union[Breakpoint, int]) -> None:
+        """
+        bp: A `Breakpoint` instance or the address of the breakpoint
+        """
+
+    @abc.abstractmethod
+    def breakpoint_del_by_index(self, index: int) -> None:
+        """ """
+
+    # --------------------------------------------------------------------------
+    # watchpoint interface
+
+    @property
+    @abc.abstractmethod
+    def watchpoints(self) -> List[Watchpoint]:
+        """ """
+
+    @abc.abstractmethod
+    def watchpoint_add(
+        self,
+        begin: int,
+        end: int,
+        access: WatchpointAccess,
+        watchpoint_type: WatchpointType,
+        condition: Optional[BreakpointCondition] = None,
+        hit_callback: Optional[BreakpointHitCb] = None
+    ) -> Watchpoint:
+        """ """
+
+    @abc.abstractmethod
+    def watchpoint_del(
+        self, watchpoint: Union[Watchpoint, Tuple[int, int]]
+    ) -> None:
+        """
+        watchpoint: A `Watchpoint` instance or the (begin, end) address tuple of
+                    the watchpoint
+        """
+
+    @abc.abstractmethod
+    def watchpoint_del_by_index(self, index: int) -> None:
+        """ """
 
     def disassemble(self, address: int, count: int) -> List[str]:
         search = list(filter(
@@ -127,46 +186,9 @@ class Debugger(abc.ABC):
 
             code = self.mem.read(address, chunk_size)
 
-            return self._disassembler.disassemble_mem_range(
-                bytearray(code), address, count)
-        else:
-            raise ValueError(f'Fail to disassemble at {address}, not mapped')
+            listing = self._disassembler.disassemble_mem_range(
+                bytearray(code), address, count
+            )
+            return listing
 
-    @abc.abstractmethod
-    def breakpoint_set(self, address: int, count: int = 0) -> None:
-        """ """
-
-    @abc.abstractmethod
-    def breakpoint_del(self, address: int) -> None:
-        """ """
-
-    @abc.abstractmethod
-    def breakpoint_del_by_index(self, idx: int) -> None:
-        """ """
-
-    @abc.abstractmethod
-    def breakpoint_get(self) -> List[Breakpoint]:
-        """ """
-
-    @abc.abstractmethod
-    def set_step(self) -> None:
-        """ """
-
-    @abc.abstractmethod
-    def watchpoint_set(
-        self, begin: int, end: int, access: Literal['r', 'w', 'rw'],
-        count: int = 0
-    ) -> None:
-        """ """
-
-    @abc.abstractmethod
-    def watchpoint_del_by_index(self, idx: int) -> None:
-        """ """
-
-    @abc.abstractmethod
-    def watchpoint_del(self, area: str) -> None:
-        """ """
-
-    @abc.abstractmethod
-    def watchpoint_get(self) -> List[Watchpoint]:
-        """ """
+        raise ValueError(f'Fail to disassemble at {address}, not mapped')

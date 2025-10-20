@@ -20,7 +20,9 @@
 ################################################################################
 
 __all__ = [
-    'FiitCpuFactory'
+    'FiitCpuFactory',
+    'FiitDbgFactory'
 ]
 
 from .dev import FiitCpuFactory
+from .dbg.factory import FiitDbgFactory

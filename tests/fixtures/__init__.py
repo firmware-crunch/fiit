@@ -27,6 +27,7 @@ from .unicorn_utils import (
     create_uc_arm_1176,
     create_uc_arm_cortex
 )
+from .dbg_utils import DbgCallbackHarness, DbgEventCollectEntry, Blob2Dbg
 
 __all__ = [
     'MetaBinBlob',
@@ -34,5 +35,8 @@ __all__ = [
     'create_uc_arm',
     'create_uc_arm_926',
     'create_uc_arm_1176',
-    'create_uc_arm_cortex'
+    'create_uc_arm_cortex',
+    'DbgCallbackHarness',
+    'DbgEventCollectEntry',
+    'Blob2Dbg'
 ]

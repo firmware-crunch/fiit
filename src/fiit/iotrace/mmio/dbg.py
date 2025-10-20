@@ -19,15 +19,24 @@
 #
 ################################################################################
 
+__all__ = [
+    'MmioDbg'
+]
+
 from typing import Dict
 
 from cmsis_svd.model import SVDRegister
 
-from fiit.dbg import Debugger, DBG_EVENT_WATCHPOINT
+from fiit.dbg import (
+    Debugger, DbgEventWatchpointAccess, DbgEventWatchpoint, Watchpoint,
+    WatchpointAccess, WatchpointType
+)
 
 from .svd import SvdLoader, SvdIndex
 from .interceptor import MmioInterceptor, MonitoredMemory
 from .logger import MmioLogger
+
+# ==============================================================================
 
 
 class MmioDbg:
@@ -62,25 +71,59 @@ class MmioDbg:
             mmio_filters=mmio_filters,
             svd_index=svd_index)
 
+    def _create_watchpoint_event(
+        self, address: int, pc: int, access: DbgEventWatchpointAccess
+    ) -> DbgEventWatchpoint:
+        if access == DbgEventWatchpointAccess.READ:
+            wp_type = WatchpointAccess.READ
+        else:
+            wp_type = WatchpointAccess.WRITE
+
+        slot_end = address + self.mem_bit_size - 1
+        wp = Watchpoint(address, slot_end, wp_type, WatchpointType.OOB)
+        bp_event = DbgEventWatchpoint(access, pc, address, self.mem_bit_size, wp)
+        return bp_event
+
     def _read_callback(self, address: int, pc: int, state: int):
         out = self.mmio_logger.format_read_access(address, pc, state)
         print(f'\n\nmmio_dbg: {out}\n')
-        self._dbg.debug_event_callback(
-            DBG_EVENT_WATCHPOINT, {'address': pc, 'data': {'stdout': out}})
+        event = self._create_watchpoint_event(
+            address, pc, DbgEventWatchpointAccess.READ
+        )
+        self._dbg.trigger_event(event)
 
     def _write_callback(self, address: int, pc: int, state: int, new_state: int):
         out = self.mmio_logger.format_write_access(address, pc, state, new_state)
         print(f'\n\nmmio_dbg: {out}\n')
-        self._dbg.debug_event_callback(
-            DBG_EVENT_WATCHPOINT, {'address': pc, 'data': {'stdout': out}})
+        event = self._create_watchpoint_event(
+            address, pc, DbgEventWatchpointAccess.WRITE
+        )
+        self._dbg.trigger_event(event)
+
+    @staticmethod
+    def _forge_breakpoint_event_from_register(
+        address: int, pc: int, reg:
+        SVDRegister, access: DbgEventWatchpointAccess
+    ) -> DbgEventWatchpoint:
+        if access == DbgEventWatchpointAccess.READ:
+            wp_type = WatchpointAccess.READ
+        else:
+            wp_type = WatchpointAccess.WRITE
+
+        begin = reg.parent.base_address
+        end = reg.parent.base_address + reg.size - 1
+        bp = Watchpoint(begin, end, wp_type, WatchpointType.OOB)
+        bp_event = DbgEventWatchpoint(access, pc, address, reg.size, bp)
+        return bp_event
 
     def _svd_read_callback(
         self, address: int, pc: int, state: int, reg: SVDRegister
     ):
         out = self.mmio_logger.format_svd_read_access(address, pc, state, reg)
         print(f'\n\nmmio_dbg: {out}\n')
-        self._dbg.debug_event_callback(
-            DBG_EVENT_WATCHPOINT, {'address': pc, 'data': {'stdout': out}})
+        event = self._forge_breakpoint_event_from_register(
+            address, pc, reg, DbgEventWatchpointAccess.READ)
+        self._dbg.trigger_event(event)
 
     def _svd_write_callback(
         self, address: int, pc: int, state: int, new_state: int, reg: SVDRegister
@@ -88,5 +131,6 @@ class MmioDbg:
         out = self.mmio_logger.format_svd_write_access(address, pc, state,
                                                        new_state, reg)
         print(f'\n\nmmio_dbg: {out}\n')
-        self._dbg.debug_event_callback(
-            DBG_EVENT_WATCHPOINT, {'address': pc, 'data': {'stdout': out}})
+        event = self._forge_breakpoint_event_from_register(
+            address, pc, reg, DbgEventWatchpointAccess.WRITE)
+        self._dbg.trigger_event(event)

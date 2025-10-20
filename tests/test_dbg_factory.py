@@ -19,24 +19,38 @@
 #
 ################################################################################
 
-__all__ = [
-    'unicorn_fix_issue_972',
-    'MemoryUnicorn',
-    'CpuRegistersUnicorn',
-    'CpuUnicorn',
-    'DebuggerUnicorn',
-    'CpuFactoryUnicorn',
-    'ArchArm32Unicorn',
-    'ArchArm32CoprocUnicorn',
-]
+from fiit import FiitCpuFactory, FiitDbgFactory
+from fiit.emunicorn import DebuggerUnicorn
+from fiit.machine import DeviceCpu
 
-from .fix import unicorn_fix_issue_972
-from .memory import MemoryUnicorn
-from .registers import CpuRegistersUnicorn
-from .cpu import CpuUnicorn
-from .dbg import DebuggerUnicorn
-from .factory import CpuFactoryUnicorn
-from .arm32 import (
-    ArchArm32Unicorn,
-    ArchArm32CoprocUnicorn
-)
+import pytest
+
+# ==============================================================================
+
+
+def test_get_dbg():
+    cpu = FiitCpuFactory.get('unicorn', 'arm32', endian='le')
+    dbg = FiitDbgFactory.get(cpu)
+    assert isinstance(dbg, DebuggerUnicorn)
+
+
+def test_get_dbg_invalid_cpu():
+    class UnsupportedCpu:
+        cpu = None
+
+    with pytest.raises(ValueError):
+        dbg = FiitDbgFactory.get(UnsupportedCpu())
+
+
+def test_get_dbg_cpu_not_supported():
+    class UnsupportedCpu:
+        class mem:
+            name = 'ram0'
+        regs = None
+
+    cpu = DeviceCpu(UnsupportedCpu)
+
+    with pytest.raises(ValueError):
+        dbg = FiitDbgFactory.get(cpu)
+
+

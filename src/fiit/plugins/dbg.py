@@ -26,7 +26,8 @@ __all__ = [
 from typing import List, cast, Any, Dict
 
 from fiit.machine import Machine
-from fiit.dbg import DebuggerFactory, Debugger
+from fiit.dbg import Debugger
+from fiit.dbg.factory import FiitDbgFactory
 from fiit.plugin import FiitPluginContext, FiitPlugin
 
 from . import CTX_REQ_MACHINE, CTX_MACHINE, CTX_DBG
@@ -61,7 +62,7 @@ class PluginDbg(FiitPlugin):
 
         for cpu_name, config in plugin_config.items():
             cpu = machine.get_device_cpu(cpu_name)
-            dbg = DebuggerFactory.get(cpu)
+            dbg = FiitDbgFactory.get(cpu)
             dbg_list.append(dbg)
             self.log.info(f'Attach new debugger instance to dev@{cpu.dev_name}')
 

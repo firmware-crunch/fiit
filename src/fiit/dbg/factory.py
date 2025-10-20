@@ -18,25 +18,28 @@
 # with fiit. If not, see <https://www.gnu.org/licenses/>.
 #
 ################################################################################
+from typing import List, Type
 
-__all__ = [
-    'unicorn_fix_issue_972',
-    'MemoryUnicorn',
-    'CpuRegistersUnicorn',
-    'CpuUnicorn',
-    'DebuggerUnicorn',
-    'CpuFactoryUnicorn',
-    'ArchArm32Unicorn',
-    'ArchArm32CoprocUnicorn',
-]
+from fiit.emunicorn import DebuggerUnicorn
+from fiit.dbg import Debugger
+from fiit.machine import DeviceCpu
 
-from .fix import unicorn_fix_issue_972
-from .memory import MemoryUnicorn
-from .registers import CpuRegistersUnicorn
-from .cpu import CpuUnicorn
-from .dbg import DebuggerUnicorn
-from .factory import CpuFactoryUnicorn
-from .arm32 import (
-    ArchArm32Unicorn,
-    ArchArm32CoprocUnicorn
-)
+# ==============================================================================
+
+
+class FiitDbgFactory:
+
+    _DEBUGGERS: List[Type[Debugger]] = [
+        DebuggerUnicorn  # Add debugger backend here ...
+    ]
+
+    @classmethod
+    def get(cls, cpu: DeviceCpu) -> Debugger:
+        if not isinstance(cpu, DeviceCpu):
+            raise ValueError(f'cpu not supported "{cpu}"')
+
+        for backend_class in cls._DEBUGGERS:
+            if isinstance(cpu.cpu, backend_class.CPU_CLASS):
+                return backend_class(cpu)
+
+        raise ValueError(f'debugger backend not found for cpu "{cpu}"')
