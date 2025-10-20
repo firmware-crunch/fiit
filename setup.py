@@ -45,6 +45,16 @@ setuptools.setup(
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.9",
     install_requires=[
+        # TODO : remove setuptools freeze
+        # temporary setuptools freeze, waiting for the next Unicorn update.
+        # raison:
+        # Warning in unicorn/unicorn.py:8:
+        # UserWarning: pkg_resources is deprecated as an API
+        # The pkg_resources package is slated for removal as early as 2025-11-30
+        # Refrain from using this package or pin to Setuptools<81.
+        # import pkg_resources
+        'setuptools <80.9',
+
         'unicorn ==2.0.1',
         # unicorn dev branch
         #'unicorn @ git+https://github.com/unicorn-engine/unicorn.git@dev#subdirectory=bindings/python',
