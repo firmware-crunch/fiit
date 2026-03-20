@@ -19,8 +19,17 @@
 #
 ################################################################################
 
+import os
+
 from fiit.iotrace.mmio.svd import SvdLoader, SvdIndex
 from fiit.iotrace.mmio.filter import MmioFilter, RegisterField
+
+
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def get_svd_fixture_path(filename: str) -> str:
+    return os.path.join(FILE_DIR, 'fixtures', 'cmsis-svd', filename)
 
 
 def test_keep_from_address():
@@ -83,7 +92,7 @@ def test_register_field_change():
 
 
 def test_svd_filter_peripheral_keep():
-    dev = SvdLoader().load('./fixtures/cmsis-svd/Toshiba_M367.svd')
+    dev = SvdLoader().load(get_svd_fixture_path('Toshiba_M367.svd'))
     mmio_filter = MmioFilter(svd_filter_peripheral_keep={'UART4'},
                              svd_index=SvdIndex(dev))
     assert mmio_filter.svd_filter_is_active()
@@ -106,7 +115,7 @@ def test_svd_filter_peripheral_keep():
 
 
 def test_svd_filter_peripheral_exclude():
-    dev = SvdLoader().load('./fixtures/cmsis-svd/Toshiba_M367.svd')
+    dev = SvdLoader().load(get_svd_fixture_path('Toshiba_M367.svd'))
     mmio_filter = MmioFilter(svd_filter_peripheral_exclude={'UART4'},
                              svd_index=SvdIndex(dev))
     assert mmio_filter.svd_filter_is_active()
@@ -129,7 +138,7 @@ def test_svd_filter_peripheral_exclude():
 
 
 def test_svd_filter_register_keep():
-    dev = SvdLoader().load('./fixtures/cmsis-svd/Toshiba_M367.svd')
+    dev = SvdLoader().load(get_svd_fixture_path('Toshiba_M367.svd'))
     mmio_filter = MmioFilter(svd_filter_register_keep={'UART4': {'DR'}},
                              svd_index=SvdIndex(dev))
     assert mmio_filter.svd_filter_is_active()
@@ -152,7 +161,7 @@ def test_svd_filter_register_keep():
 
 
 def test_svd_filter_register_exclude():
-    dev = SvdLoader().load('./fixtures/cmsis-svd/Toshiba_M367.svd')
+    dev = SvdLoader().load(get_svd_fixture_path('Toshiba_M367.svd'))
     mmio_filter = MmioFilter(svd_filter_register_exclude={'UART4': {'DR'}},
                              svd_index=SvdIndex(dev))
     assert mmio_filter.svd_filter_is_active()
@@ -175,7 +184,7 @@ def test_svd_filter_register_exclude():
 
 
 def test_svd_filter_register_state_change():
-    dev = SvdLoader().load('./fixtures/cmsis-svd/Toshiba_M367.svd')
+    dev = SvdLoader().load(get_svd_fixture_path('Toshiba_M367.svd'))
     mmio_filter = MmioFilter(svd_filter_register_state_change={'UART4': {'DR'}},
                              svd_index=SvdIndex(dev))
     assert mmio_filter.svd_filter_is_active()
@@ -190,7 +199,7 @@ def test_svd_filter_register_state_change():
 
 
 def test_svd_filter_field_state_change():
-    dev = SvdLoader().load('./fixtures/cmsis-svd/Toshiba_M367.svd')
+    dev = SvdLoader().load(get_svd_fixture_path('Toshiba_M367.svd'))
     mmio_filter = MmioFilter(svd_filter_field_state_change={
                                 'UART4': {'DR': {'DATA'}}},
                              svd_index=SvdIndex(dev))
@@ -206,7 +215,7 @@ def test_svd_filter_field_state_change():
 
 
 def test_svd_filter_keep_from_address():
-    dev = SvdLoader().load('./fixtures/cmsis-svd/Toshiba_M367.svd')
+    dev = SvdLoader().load(get_svd_fixture_path('Toshiba_M367.svd'))
     mmio_filter = MmioFilter(filter_keep_from_address:={0xffff00f0},
                              svd_index=SvdIndex(dev))
     assert mmio_filter.svd_filter_is_active()
@@ -229,7 +238,7 @@ def test_svd_filter_keep_from_address():
 
 
 def test_svd_filter_exclude_from_address():
-    dev = SvdLoader().load('./fixtures/cmsis-svd/Toshiba_M367.svd')
+    dev = SvdLoader().load(get_svd_fixture_path('Toshiba_M367.svd'))
     mmio_filter = MmioFilter(filter_exclude_from_address={0xffff00f4},
                              svd_index=SvdIndex(dev))
     assert mmio_filter.svd_filter_is_active()

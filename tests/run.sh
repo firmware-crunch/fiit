@@ -71,14 +71,19 @@ test_plugin_shell.py
 test_hooking_cc_aapcs32.py
 )
 
+SCRIPT_DIR=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+
+TEST_FILES_PREFIXED=("${TEST_FILES[@]/#/$SCRIPT_DIR/}")
+
 #
 # IPY_TEST_SIMPLE_PROMPT=1 Force IPython to use input than readline.
 #
 IPY_TEST_SIMPLE_PROMPT=1 JUPYTER_PLATFORM_DIRS=1 pytest                        \
+  --rootdir="${SCRIPT_DIR}"                                                    \
   --cov="fiit"                                                                 \
   --cov-report html                                                            \
   --cache-clear                                                                \
   --capture=no                                                                 \
   --verbose                                                                    \
   "${@}"                                                                       \
-  "${TEST_FILES[@]}"
+  "${TEST_FILES_PREFIXED[@]}"
