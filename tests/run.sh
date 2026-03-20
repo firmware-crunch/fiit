@@ -75,9 +75,11 @@ test_hooking_cc_aapcs32.py
 # IPY_TEST_SIMPLE_PROMPT=1 Force IPython to use input than readline.
 #
 IPY_TEST_SIMPLE_PROMPT=1 JUPYTER_PLATFORM_DIRS=1 pytest                        \
-  --cov-report html                                                            \
   --cov="fiit"                                                                 \
-  -s -v "${@}"                                                                 \
+  --cov-report html                                                            \
+  --capture=no                                                                 \
+  --verbose                                                                    \
+  "${@}"                                                                       \
   "${TEST_FILES[@]}"
 
 rm -rf .pytest_cache
