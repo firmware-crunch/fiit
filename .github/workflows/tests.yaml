@@ -1,0 +1,48 @@
+name: 'tests'
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  fiit_tests_python:
+    name: 'fiit tests python'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Gives the action the necessary permissions for pushing data to the
+      # python-coverage-comment-action branch, and for editing existing
+      # comments (to avoid publishing multiple comments in the same PR)
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # This is optional since by default it's to true. The git
+          # operations in python-coverage-comment-action utilize the token
+          # stored by actions/checkout.
+          persist-credentials: true
+
+      - name: 'setup python'
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: 'install fiit'
+        run: pip install --editable .[DEV]
+
+      - name: 'coverage file path fix for python-coverage-comment-action'
+        run: |
+          echo '[run]' > ./.coveragerc
+          echo 'relative_files = True' >> ./.coveragerc
+
+      - name: 'run tests'
+        run: ./tests/run.sh
+
+      - name: 'generate and post Python coverage comment'
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          COVERAGE_DATA_BRANCH: fiit-py-cov
