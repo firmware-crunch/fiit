@@ -77,9 +77,8 @@ test_hooking_cc_aapcs32.py
 IPY_TEST_SIMPLE_PROMPT=1 JUPYTER_PLATFORM_DIRS=1 pytest                        \
   --cov="fiit"                                                                 \
   --cov-report html                                                            \
+  --cache-clear                                                                \
   --capture=no                                                                 \
   --verbose                                                                    \
   "${@}"                                                                       \
   "${TEST_FILES[@]}"
-
-rm -rf .pytest_cache
