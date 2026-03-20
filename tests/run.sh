@@ -81,7 +81,6 @@ TEST_FILES_PREFIXED=("${TEST_FILES[@]/#/$SCRIPT_DIR/}")
 IPY_TEST_SIMPLE_PROMPT=1 JUPYTER_PLATFORM_DIRS=1 pytest                        \
   --rootdir="${SCRIPT_DIR}"                                                    \
   --cov="fiit"                                                                 \
-  --cov-report html                                                            \
   --cache-clear                                                                \
   --capture=no                                                                 \
   --verbose                                                                    \
