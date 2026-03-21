@@ -1,0 +1,37 @@
+name: 'build'
+
+on: push
+
+jobs:
+  build:
+    name: build
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: 'setup python'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.9'
+
+
+      - name: 'install pypa/build'
+        run: >-
+          python3 -m
+          pip install
+          build
+          --user
+
+      - name: 'build a binary wheel and a source tarball'
+        run: python3 -m build
+
+      - name: 'store the distribution packages'
+        uses: actions/upload-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
