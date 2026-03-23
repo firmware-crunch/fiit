@@ -8,3 +8,11 @@
 Fiit aims to provide a toolbox for firmware instrumentation and in-depth dynamic analysis, in emulated or physical environment.
 This project targets exotic CPU architectures and bare-metal or real-time operating system that requires minimally intrusive instrumentation.
 The library provides a set of python interfaces and a high-level framework interface, which enable the creation of custom runtime environments with advanced firmware introspection capabilities at the processor, peripheral and software levels.
+
+## Installation
+
+Fiit is available on PyPI:
+
+```text
+$ pip install fiit-py
+```
