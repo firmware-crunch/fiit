@@ -4,13 +4,16 @@ This file details the changelog of fiit.
 
 ---
 
-## 0.3.0 - 2025-10-10
+## 0.3.0 - 2026-03-24
 
-**Full Changelog**: https://github.com/firmware-crunch/fiit/compare/0.1.0...0.3.0
+**Full Changelog**: https://github.com/firmware-crunch/fiit/compare/v0.1.0...v0.3.0
 
 ### Added
 
-- Add new debugger API for advanced debugger scripting in pure Python
+- Fiit Python package is now avalaible on PyPI - [fiit-py](https://pypi.org/project/fiit-py/)
+- Add new debugger API for advanced debugger scripting in pure Python ([7a86634](https://github.com/firmware-crunch/fiit/commit/7a86634689f8bbc64f6e1f84134a211251cb2cdd))
+
+Add machine, devices and cpu abstraction layer ([676912e](https://github.com/firmware-crunch/fiit/commit/676912ee66e2237206bdf46cd15c6a2fc5573bce)):
 - Add `machine` subpackage that provides an abstraction for machine, devices and cpu
 - Add `dev` subpackage that provides reusable devices over the `machine` abstraction
 - Add `emunicorn` subpackage that implements access to emulated Unicorn cpu
@@ -18,10 +21,11 @@ This file details the changelog of fiit.
 - Add `FiitCpuFactory` interface to build configurable cpu instance
 - Add new plugin interface to build complex hardware and introspection scenario
 
+---
 
 ## 0.2.0 - 2025-07-16
 
-**Full Changelog**: https://github.com/firmware-crunch/fiit/compare/0.1.0...0.2.0
+**Full Changelog**: https://github.com/firmware-crunch/fiit/compare/v0.1.0...v0.2.0
 
 ### Added
 
