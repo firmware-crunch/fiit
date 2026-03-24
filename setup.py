@@ -26,7 +26,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="fiit-py",
-    version="0.3.0",
+    use_scm_version=True,
     author="Vincent Dary",
     author_email="",
     description="fiit: Firmware Instrumentation and Introspection Tools",
