@@ -1,0 +1,150 @@
+name: 'build'
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  ###########################################################################
+  fiit_tests_python:
+    name: 'fiit tests python'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: 'setup python'
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: 'install fiit'
+        run: pip install --editable .[DEV]
+
+      - name: 'coverage file path fix for python-coverage-comment-action'
+        run: |
+          echo '[run]' > ./.coveragerc
+          echo 'relative_files = True' >> ./.coveragerc
+
+      - name: 'run tests'
+        run: ./tests/run.sh
+
+  ###########################################################################
+  build:
+    name: 'Build'
+
+    needs:
+    - fiit_tests_python
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: 'setup python'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.9'
+
+      - name: 'install pypa/build'
+        run: >-
+          python3 -m
+          pip install
+          build
+          --user
+
+      - name: 'build a binary wheel and a source tarball'
+        run: python3 -m build
+
+      - name: 'store the distribution packages'
+        uses: actions/upload-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Generate Changelog
+        run: >-
+          mawk '/^## [0-9]+\.[0-9]+\.[0-9]+/{count++} count==1 && !/^## /{print}'
+          changelog.md > changelog_part.txt
+
+      - name: 'store the Changelog'
+        uses: actions/upload-artifact@v5
+        with:
+          name: changelog_part
+          path: changelog_part.txt
+
+
+  #############################################################################
+  publish-to-pypi:
+    name: 'PyPI Release'
+
+    needs:
+    - build
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/fiit-py
+
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v6
+      with:
+        name: python-package-distributions
+        path: dist/
+
+    - name: Publish distribution to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+
+  #############################################################################
+  github-release:
+    name: 'GitHub Release'
+
+    needs:
+    - publish-to-pypi
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+
+    steps:
+    - name: Download Changelog
+      uses: actions/download-artifact@v4
+      with:
+        name: changelog_part
+
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: >-
+        gh release create
+        '${{ github.ref_name }}'
+        --repo '${{ github.repository }}'
+        --title 'Fiit ${{github.ref_name}}'
+        --notes-file changelog_part.txt
+
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+    - name: Upload artifact signatures to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
