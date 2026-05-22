@@ -50,12 +50,12 @@
 | src/fiit/ftrace/filter.py                |       46 |       26 |     43% |35, 38, 69-105, 109 |
 | src/fiit/ftrace/ftrace.py                |       54 |       36 |     33% |75-158, 167, 172, 177, 182, 185-186, 191-192 |
 | src/fiit/ftrace/logfmt.py                |       88 |       66 |     25% |42, 45, 72-95, 101-104, 117-167, 170-187, 192-207 |
-| src/fiit/funhook/\_\_init\_\_.py         |        2 |        0 |    100% |           |
-| src/fiit/funhook/cc/\_\_init\_\_.py      |       15 |        8 |     47% |47-50, 54-58 |
-| src/fiit/funhook/cc/aapcs32.py           |      305 |        0 |    100% |           |
-| src/fiit/funhook/cc/cc.py                |       52 |       11 |     79% |51, 66, 77, 81, 85, 89, 93, 99, 103, 107, 113 |
-| src/fiit/funhook/defines.py              |       56 |       20 |     64% |52-56, 60-64, 68-72, 79-87 |
-| src/fiit/funhook/interceptor.py          |      184 |      150 |     18% |72-113, 117, 120-122, 129-147, 154-157, 160-161, 164-165, 168-200, 203-204, 207-246, 251-264, 272-290, 294, 298, 302-305, 308-311, 314-323, 326-327, 330-332, 335-389 |
+| src/fiit/hooking/\_\_init\_\_.py         |        2 |        0 |    100% |           |
+| src/fiit/hooking/cc/\_\_init\_\_.py      |       15 |        8 |     47% |46-49, 53-57 |
+| src/fiit/hooking/cc/aapcs32.py           |      305 |        0 |    100% |           |
+| src/fiit/hooking/cc/cc.py                |       52 |       11 |     79% |51, 66, 77, 81, 85, 89, 93, 99, 103, 107, 113 |
+| src/fiit/hooking/defines.py              |       56 |       20 |     64% |52-56, 60-64, 68-72, 79-87 |
+| src/fiit/hooking/engine.py               |      184 |      150 |     18% |72-113, 117, 120-122, 129-147, 154-157, 160-161, 164-165, 168-200, 203-204, 207-246, 251-264, 272-290, 294, 298, 302-305, 308-311, 314-323, 326-327, 330-332, 335-389 |
 | src/fiit/iotrace/\_\_init\_\_.py         |        2 |        0 |    100% |           |
 | src/fiit/iotrace/mmio/\_\_init\_\_.py    |        4 |        0 |    100% |           |
 | src/fiit/iotrace/mmio/dbg.py             |       55 |       39 |     29% |51-64, 77-85, 88-93, 96-101, 108-117, 122-126, 131-136 |
@@ -79,7 +79,7 @@
 | src/fiit/plugins/com.py                  |       15 |        6 |     60% |     55-63 |
 | src/fiit/plugins/dbg.py                  |       21 |        8 |     62% |     60-69 |
 | src/fiit/plugins/ftrace.py               |       44 |       18 |     59% |59, 136-168 |
-| src/fiit/plugins/funhook.py              |       27 |       15 |     44% |    76-104 |
+| src/fiit/plugins/hooking.py              |       27 |       15 |     44% |    76-104 |
 | src/fiit/plugins/logger.py               |        9 |        0 |    100% |           |
 | src/fiit/plugins/machine.py              |      120 |        6 |     95% |157, 177, 218, 268, 296, 301 |
 | src/fiit/plugins/mmiotrace.py            |      144 |      105 |     27% |67-90, 93, 98-116, 119-157, 160-169, 173-199, 203-213, 332-347, 378-395 |

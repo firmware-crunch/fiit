@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/fiit/plugins/funhook.py: 44%</title>
+    <title>Coverage for src/fiit/plugins/hooking.py: 44%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -11,7 +11,7 @@
 <header>
     <div class="content">
         <h1>
-            <span class="text">Coverage for </span><b>src&#8201;/&#8201;fiit&#8201;/&#8201;plugins&#8201;/&#8201;funhook.py</b>:
+            <span class="text">Coverage for </span><b>src&#8201;/&#8201;fiit&#8201;/&#8201;plugins&#8201;/&#8201;hooking.py</b>:
             <span class="pc_cov">44%</span>
         </h1>
         <aside id="help_panel_wrapper">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_bdd6925b895b026a_logger_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-18 16:43 +0000
+            created at 2026-05-22 09:31 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -82,7 +82,7 @@
 <main id="source">
     <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="com">################################################################################</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t"><span class="com">#</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="com"># Copyright 2022-2026 Vincent Dary</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="com"># Copyright 2022-2025 Vincent Dary</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="com">#</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="com"># This file is part of fiit.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="com">#</span>&nbsp;</span><span class="r"></span></p>
@@ -105,18 +105,18 @@
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="key">from</span> <span class="nam">fiit</span><span class="op">.</span><span class="nam">machine</span> <span class="key">import</span> <span class="nam">Machine</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="key">from</span> <span class="nam">fiit</span><span class="op">.</span><span class="nam">ctypesarch</span> <span class="key">import</span> <span class="nam">CTYPES_TRANSLATOR_FLAVOR</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="key">from</span> <span class="nam">fiit</span><span class="op">.</span><span class="nam">funhook</span><span class="op">.</span><span class="nam">interceptor</span> <span class="key">import</span> <span class="nam">FunInterceptor</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="key">from</span> <span class="nam">fiit</span><span class="op">.</span><span class="nam">hooking</span><span class="op">.</span><span class="nam">engine</span> <span class="key">import</span> <span class="nam">HookingEngine</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="key">from</span> <span class="nam">fiit</span><span class="op">.</span><span class="nam">plugin</span> <span class="key">import</span> <span class="nam">FiitPlugin</span><span class="op">,</span> <span class="nam">FiitPluginContext</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="key">from</span> <span class="op">.</span> <span class="key">import</span> <span class="nam">CTX_REQ_MACHINE</span><span class="op">,</span> <span class="nam">CTX_FUNHOOK</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t"><span class="key">from</span> <span class="op">.</span> <span class="key">import</span> <span class="nam">CTX_REQ_MACHINE</span><span class="op">,</span> <span class="nam">CTX_HOOKING</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="com"># ==============================================================================</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="key">class</span> <span class="nam">PluginFunhook</span><span class="op">(</span><span class="nam">FiitPlugin</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="nam">NAME</span> <span class="op">=</span> <span class="str">'plugin_funhook'</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="key">class</span> <span class="nam">PluginHooking</span><span class="op">(</span><span class="nam">FiitPlugin</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="nam">NAME</span> <span class="op">=</span> <span class="str">'plugin_hooking'</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">REQUIREMENTS</span> <span class="op">=</span> <span class="op">[</span><span class="nam">CTX_REQ_MACHINE</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="nam">OBJECTS_PROVIDED</span> <span class="op">=</span> <span class="op">[</span><span class="nam">CTX_FUNHOOK</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="nam">OBJECTS_PROVIDED</span> <span class="op">=</span> <span class="op">[</span><span class="nam">CTX_HOOKING</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">CONFIG_SCHEMA</span> <span class="op">=</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">        <span class="nam">NAME</span><span class="op">:</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">            <span class="str">'type'</span><span class="op">:</span> <span class="str">'dict'</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -155,7 +155,7 @@
     <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">        <span class="nam">requirements</span><span class="op">:</span> <span class="nam">Dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">        <span class="nam">optional_requirements</span><span class="op">:</span> <span class="nam">Dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">        <span class="nam">engines</span><span class="op">:</span> <span class="nam">List</span><span class="op">[</span><span class="nam">FunInterceptor</span><span class="op">]</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">        <span class="nam">engines</span><span class="op">:</span> <span class="nam">List</span><span class="op">[</span><span class="nam">HookingEngine</span><span class="op">]</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">        <span class="nam">machine</span> <span class="op">=</span> <span class="nam">cast</span><span class="op">(</span><span class="nam">Machine</span><span class="op">,</span> <span class="nam">requirements</span><span class="op">[</span><span class="nam">CTX_REQ_MACHINE</span><span class="op">.</span><span class="nam">name</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">        <span class="key">for</span> <span class="nam">cpu_name</span><span class="op">,</span> <span class="nam">config</span> <span class="key">in</span> <span class="nam">plugin_config</span><span class="op">.</span><span class="nam">items</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -163,7 +163,7 @@
     <p class="pln"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">            <span class="nam">ctypes_flavor</span> <span class="op">=</span> <span class="nam">CTYPES_TRANSLATOR_FLAVOR</span><span class="op">[</span><span class="nam">config</span><span class="op">[</span><span class="str">'ctypes_flavor'</span><span class="op">]</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">            <span class="nam">he</span> <span class="op">=</span> <span class="nam">FunInterceptor</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">            <span class="nam">he</span> <span class="op">=</span> <span class="nam">HookingEngine</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">                <span class="nam">cpu</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">                <span class="nam">ctypes_options</span><span class="op">=</span><span class="nam">config</span><span class="op">[</span><span class="str">'ctypes_options'</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis mis2 show_mis"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">                <span class="nam">ctypes_flavor</span><span class="op">=</span><span class="nam">ctypes_flavor</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -179,11 +179,11 @@
     <p class="pln"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">            <span class="key">for</span> <span class="nam">python_hook_file</span> <span class="key">in</span> <span class="nam">config</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">'python_hook_files'</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">                <span class="nam">he</span><span class="op">.</span><span class="nam">register_hook_functions_from_file</span><span class="op">(</span><span class="nam">python_hook_file</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">                <span class="nam">he</span><span class="op">.</span><span class="nam">register_hook_scope_from_file</span><span class="op">(</span><span class="nam">python_hook_file</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">                <span class="nam">he</span><span class="op">.</span><span class="nam">register_hook_handler_from_file</span><span class="op">(</span><span class="nam">python_hook_file</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">            <span class="nam">engines</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">he</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">        <span class="nam">plugins_context</span><span class="op">.</span><span class="nam">add</span><span class="op">(</span><span class="nam">CTX_FUNHOOK</span><span class="op">.</span><span class="nam">name</span><span class="op">,</span> <span class="nam">engines</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">        <span class="nam">plugins_context</span><span class="op">.</span><span class="nam">add</span><span class="op">(</span><span class="nam">CTX_HOOKING</span><span class="op">.</span><span class="nam">name</span><span class="op">,</span> <span class="nam">engines</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -193,7 +193,7 @@
             <a class="nav" href="z_bdd6925b895b026a_logger_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-18 16:43 +0000
+            created at 2026-05-22 09:31 +0000
         </p>
     </div>
 </footer>
